@@ -1,0 +1,1177 @@
+<title>Family Quiz Game</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: one bright "sweet shop" column. Each question is a candy card in its topic's colour; answers are chunky sweets below.
+   Light only, by design: the game stays bright at any time of day. Every text colour pair is checked to WCAG AA (4.5:1). */
+:root{
+  color-scheme:light;
+  --bg:#FFF6FA; --card:#FFFFFF; --ink:#2B1B4A; --muted:#5B4B78; --line:#E2D6EE; --edge:#8C7FA6;
+  --pop:#FFD84D; --pop-edge:#D9A800; --cream:#FFF0B3;
+  --good-bg:#C9F5DA; --good-ink:#0B3A20; --good:#157A45;
+  --bad-bg:#FFD3D3; --bad-ink:#6B0F0F; --bad:#C62828;
+  --fade-bg:#F1ECF6;
+  --gk:#8DB8FF; --gk-ink:#0B2357; --geo:#57DCC9; --geo-ink:#04332C; --mus:#FF9EC2; --mus-ink:#4A0A24;
+  --sci:#9BE06A; --sci-ink:#173A06; --mat:#FFB862; --mat-ink:#4A2500; --dis:#C9AEFF; --dis-ink:#2A0E66;
+  --o1:#FF9EC2; --o2:#FFD84D; --o3:#C9AEFF; --o4:#8EE6B4;
+  --t1:#C2185B; --t2:#5B2FC7; --t3:#0B7A6E;
+  --hand:#2B1B4A; --minute:#D6336C;
+  --display:"Fredoka", "Arial Rounded MT Bold", "Trebuchet MS", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.45;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:12px 28px}
+#app{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.1;font-weight:600}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.btn{border:0;border-radius:18px;padding:14px 18px;font-family:var(--display);font-weight:600;min-height:54px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:1.1rem}
+.btn-main{background:var(--pop);color:var(--ink);font-size:1.3rem;box-shadow:0 5px 0 var(--pop-edge)}
+.btn-main:active{transform:translateY(3px);box-shadow:0 2px 0 var(--pop-edge)}
+.btn-ghost{background:var(--card);border:2px solid var(--edge);color:var(--ink)}
+.btn-small{min-height:42px;padding:8px 14px;font-size:1rem;border-radius:14px}
+.label{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;font-weight:700;color:var(--muted)}
+.note{font-size:.92rem;color:var(--muted);margin:0}
+.err{color:var(--bad);font-weight:700;margin:0}
+.linkbtn{background:none;border:0;padding:0;color:var(--t2);text-decoration:underline;font-size:.92rem}
+
+/* Setup */
+.hero{padding-block:14px 0;display:flex;flex-direction:column;gap:8px}
+.hero h1{font-size:clamp(2.5rem, 12vw, 3.6rem);font-weight:700;letter-spacing:-.01em;line-height:1}
+.hero h1 .w1{color:var(--t1)} .hero h1 .w2{color:var(--t2)} .hero h1 .w3{color:var(--t3)}
+.hero p{margin:0;color:var(--muted);max-width:34ch}
+.sweets{font-size:1.6rem;letter-spacing:.2em}
+.panel{background:var(--card);border-radius:24px;padding:18px;display:flex;flex-direction:column;gap:14px;border:2px solid var(--line)}
+.panel h2{font-size:1.35rem}
+.prow,.phead{display:grid;grid-template-columns:52px minmax(0,1fr) 72px 40px;gap:8px;align-items:center}
+.av{width:52px;height:52px;border-radius:50%;border:2px solid var(--line);background:var(--cream);font-size:28px;line-height:1;display:grid;place-items:center;padding:0}
+.av[aria-expanded="true"]{border-color:var(--ink)}
+.avgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(48px,1fr));gap:6px;background:var(--fade-bg);border-radius:18px;padding:10px}
+.avgrid button{height:48px;border-radius:14px;border:2px solid transparent;background:var(--card);font-size:26px;line-height:1;padding:0}
+.avgrid button[aria-pressed="true"]{border-color:var(--ink);background:var(--cream)}
+.avgrid button:disabled{opacity:.35;cursor:default}
+.field{width:100%;min-width:0;border:2px solid var(--edge);background:var(--card);border-radius:14px;padding:10px 12px;min-height:50px}
+.field::placeholder{color:var(--muted);opacity:1}
+.field:focus{border-color:var(--ink);outline:none}
+.rm{width:40px;height:40px;border-radius:50%;border:0;background:transparent;color:var(--muted);font-size:1.5rem;line-height:1}
+.rm:hover{background:var(--fade-bg)}
+.rm:disabled{visibility:hidden}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:2px dashed var(--edge);background:var(--card);color:var(--ink);border-radius:999px;padding:8px 14px;font-family:var(--display);font-weight:600;font-size:1.02rem;min-height:46px;display:inline-flex;align-items:center;gap:8px}
+.chip[aria-pressed="true"]{border:2px solid var(--ci);background:var(--c);color:var(--ci)}
+.seg{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.seg button{border:2px solid var(--edge);background:var(--card);border-radius:14px;min-height:50px;font-family:var(--display);font-weight:700;font-size:1.2rem}
+.seg button[aria-pressed="true"]{background:var(--pop);border-color:var(--ink)}
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.switch{width:58px;height:34px;border-radius:999px;border:2px solid var(--edge);background:var(--fade-bg);position:relative;flex:none}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:var(--edge);transition:transform .15s}
+.switch[aria-checked="true"]{background:var(--good);border-color:var(--good)}
+.switch[aria-checked="true"]::after{transform:translateX(24px);background:var(--card)}
+
+/* Play */
+.bar{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}
+.scores{display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+.sc{display:inline-flex;align-items:center;gap:6px;padding:4px 12px 4px 5px;border-radius:999px;background:var(--card);border:2px solid var(--line);font-weight:700;font-size:.95rem}
+.sc .a{font-size:1.25rem;line-height:1}
+.sc b{font-family:var(--display);font-size:1.1rem;font-variant-numeric:tabular-nums}
+.sc.on{background:var(--pop);border-color:var(--ink)}
+.card{background:var(--c);color:var(--ci);border-radius:28px;padding:18px 18px 22px;display:flex;flex-direction:column;gap:12px;animation:pop .35s ease-out}
+.meta{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.tag{background:var(--card);color:var(--ci);border-radius:999px;padding:4px 12px;font-family:var(--display);font-weight:600;font-size:.95rem}
+.count{font-size:.92rem;font-weight:700;font-variant-numeric:tabular-nums}
+.turn{font-size:1.6rem;display:flex;align-items:center;gap:10px}
+.turn .a{font-size:2.1rem;line-height:1}
+.pic{display:flex;justify-content:center}
+.pic svg{width:min(230px, 66vw);height:auto;max-width:100%}
+.pic .flag{width:min(250px, 70vw);border-radius:8px;box-shadow:0 0 0 3px var(--card)}
+.emoji{font-size:clamp(3.2rem, 16vw, 4.6rem);line-height:1.15;text-align:center;letter-spacing:.06em;background:var(--card);border-radius:22px;padding:8px 0}
+.q{font-family:var(--display);font-weight:600;font-size:clamp(1.4rem, 6vw, 1.9rem);line-height:1.2;margin:0;text-wrap:balance}
+.answers{display:flex;flex-direction:column;gap:10px}
+.opt{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:12px;text-align:left;border:3px solid transparent;color:var(--ink);
+  border-radius:20px;padding:10px 14px 10px 10px;min-height:64px;font-family:var(--display);font-size:1.2rem;font-weight:600;box-shadow:0 4px 0 rgba(43,27,74,.18)}
+.opt:nth-child(1){background:var(--o1)} .opt:nth-child(2){background:var(--o2)} .opt:nth-child(3){background:var(--o3)} .opt:nth-child(4){background:var(--o4)}
+.opt .k{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;font-weight:700;background:var(--card);color:var(--ink)}
+.opt .m{font-size:1.4rem;font-weight:700}
+.opt:not([disabled]):active{transform:translateY(3px);box-shadow:0 1px 0 rgba(43,27,74,.18)}
+.opt.ok{background:var(--good-bg);border-color:var(--good);color:var(--good-ink)}
+.opt.no{background:var(--bad-bg);border-color:var(--bad);color:var(--bad-ink)}
+.opt.dim{background:var(--fade-bg);color:var(--muted);box-shadow:none}
+.opt[disabled]{cursor:default}
+.reveal{background:var(--card);border:3px dashed var(--edge);border-radius:20px;padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.reveal .ans{font-family:var(--display);font-weight:700;font-size:1.7rem;line-height:1.15}
+.judge{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn-ok{background:var(--o4);color:var(--good-ink);box-shadow:0 5px 0 #4FBF85;font-size:1.25rem}
+.btn-no{background:#FF9E9E;color:var(--bad-ink);box-shadow:0 5px 0 #E06B6B;font-size:1.25rem}
+.btn-ok:active,.btn-no:active{transform:translateY(3px)}
+.result{border-radius:18px;padding:12px 16px;font-family:var(--display);font-weight:600;font-size:1.2rem}
+.result.ok{background:var(--good-bg);color:var(--good-ink)}
+.result.no{background:var(--bad-bg);color:var(--bad-ink)}
+.tools{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.hint{margin:0;color:var(--muted)}
+.ico{width:20px;height:20px;flex:none}
+
+/* End */
+.trophy{font-size:4.5rem;line-height:1;text-align:center;animation:pop .5s ease-out}
+.endh{text-align:center;font-size:clamp(2rem, 9vw, 2.8rem);font-weight:700;color:var(--t2)}
+.podium{display:flex;flex-direction:column;gap:10px}
+.rank{display:grid;grid-template-columns:40px 44px minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--card);border:2px solid var(--line);border-radius:20px;padding:10px 14px}
+.rank .pos{font-family:var(--display);font-weight:700;font-size:1.4rem;text-align:center;color:var(--muted)}
+.rank .a{font-size:2rem;line-height:1;text-align:center}
+.rank.first{border-color:var(--ink);background:var(--cream)}
+.rank.first .pos{color:var(--ink)}
+.rank .nm{font-family:var(--display);font-weight:600;font-size:1.2rem}
+.rank .st{font-size:.9rem;color:var(--muted)}
+.rank .pts{font-family:var(--display);font-weight:700;font-size:1.9rem;font-variant-numeric:tabular-nums}
+.rowbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* Pictures drawn in the page */
+.clock-face{fill:#FFFFFF;stroke:var(--hand);stroke-width:6}
+.clock-num{fill:var(--hand);font-family:var(--display);font-weight:700;font-size:19px}
+.clock-tick{stroke:var(--hand);stroke-width:2}
+.clock-h{stroke:var(--hand);stroke-width:9;stroke-linecap:round}
+.clock-m{stroke:var(--minute);stroke-width:6;stroke-linecap:round}
+.clock-c{fill:var(--hand)}
+.shape{fill:#FFFFFF;stroke:var(--ci, var(--ink));stroke-width:7;stroke-linejoin:round}
+
+/* Effects */
+.confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:50}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top, 0px) + 18px);transform:translate(-50%,-30px) scale(.9);opacity:0;z-index:60;pointer-events:none;
+  background:var(--ink);color:#FFFFFF;font-family:var(--display);font-weight:600;font-size:1.35rem;padding:12px 22px;border-radius:999px;transition:opacity .2s, transform .25s;white-space:nowrap}
+.toast.show{opacity:1;transform:translate(-50%,0) scale(1)}
+.shake{animation:shake .45s}
+@keyframes pop{from{transform:scale(.94);opacity:.4}to{transform:scale(1);opacity:1}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(4px)}}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div id="app"></div>
+
+<script>
+/* ============================================================
+   QUESTION BANK
+   Row format: [difficulty 1-5, question, answer, wrong1, wrong2, wrong3, mcOnly?, emoji?]
+   Difficulty guide: 1 = easy for a 6-8 year old, 2 = 8-10, 3 = 11-14 / easy adult,
+   4 = average adult, 5 = quiz buff.
+   ============================================================ */
+const BANK = {
+gk: [
+[1,"How many days are there in a week?","7","5","6","8"],
+[1,"What colour do you get if you mix red and yellow?","Orange","Purple","Green","Brown"],
+[1,"Which month comes after March?","April","May","February","June"],
+[1,"What is the name of the bear from Peru who loves marmalade sandwiches?","Paddington","Rupert","Winnie the Pooh","Baloo"],
+[1,"What do you call a baby cat?","A kitten","A puppy","A cub","A foal"],
+[1,"Which meal do you usually eat in the morning?","Breakfast","Dinner","Lunch","Supper"],
+[1,"What colour is a British postbox usually?","Red","Blue","Green","Yellow"],
+[1,"How many months are there in a year?","12","10","11","13"],
+[1,"Which day comes after Friday?","Saturday","Sunday","Thursday","Monday"],
+[1,"In the nursery rhyme, who sat on a wall and had a great fall?","Humpty Dumpty","Jack and Jill","Little Bo Peep","Old King Cole"],
+[1,"On what date is Christmas Day?","25th December","24th December","26th December","1st January"],
+[1,"What do you call a baby dog?","A puppy","A kitten","A calf","A lamb"],
+[1,"What colour do you get if you mix blue and yellow?","Green","Purple","Orange","Pink"],
+[2,"How many hours are there in a day?","24","12","20","48"],
+[2,"What is the name of the great bell in the clock tower at the Houses of Parliament?","Big Ben","Big Tom","Great Paul","Old Bell"],
+[2,"How many players does a football team have on the pitch?","11","9","10","12"],
+[2,"Which celebration happens on 5th November in the UK?","Bonfire Night","Halloween","Pancake Day","Easter"],
+[2,"What is the name of the school of witchcraft and wizardry in Harry Potter?","Hogwarts","Durmstrang","Nevermore","Malory Towers"],
+[2,"How many minutes are there in an hour?","60","100","30","50"],
+[2,"In Wallace and Gromit, what food does Wallace love most?","Cheese","Jam","Ham","Peanut butter"],
+[2,"How many weeks are there in a year?","52","48","50","54"],
+[2,"In which sport would you use a shuttlecock?","Badminton","Tennis","Squash","Cricket"],
+[2,"Which King was crowned in the UK in 2023?","King Charles III","King William V","King George VII","King Edward IX"],
+[2,"How many years are there in a century?","100","10","50","1,000"],
+[2,"Which famous toy bricks come from Denmark?","LEGO","K'NEX","Meccano","Mega Bloks"],
+[2,"Who wrote Charlie and the Chocolate Factory?","Roald Dahl","David Walliams","J.K. Rowling","Enid Blyton"],
+[2,"What sport does Emma Raducanu play?","Tennis","Golf","Swimming","Gymnastics"],
+[3,"What does BBC stand for?","British Broadcasting Corporation","British Broadcast Channel","British Television Corporation","Broadcasting Britain Company"],
+[3,"How many sides does a 50p coin have?","7","6","8","5"],
+[3,"Which famous detective lived at 221B Baker Street?","Sherlock Holmes","Hercule Poirot","Miss Marple","Inspector Morse"],
+[3,"In which game would you say 'checkmate'?","Chess","Draughts","Monopoly","Scrabble"],
+[3,"How many players are there in a rugby union team?","15","13","11","12"],
+[3,"What is the name of the special day before Lent when people eat pancakes?","Shrove Tuesday","Ash Wednesday","Good Friday","Boxing Day"],
+[3,"Who wrote the play Romeo and Juliet?","William Shakespeare","Christopher Marlowe","Charles Dickens","Oscar Wilde"],
+[3,"Which London bridge opens up to let tall ships through?","Tower Bridge","London Bridge","Westminster Bridge","Millennium Bridge"],
+[3,"How many players are in a cricket team?","11","10","12","9"],
+[3,"Who painted the Mona Lisa?","Leonardo da Vinci","Michelangelo","Vincent van Gogh","Pablo Picasso"],
+[3,"Who wrote A Christmas Carol?","Charles Dickens","Jane Austen","Thomas Hardy","Lewis Carroll"],
+[3,"In which year did the Second World War end?","1945","1939","1944","1950"],
+[3,"Who was the first person to walk on the Moon?","Neil Armstrong","Buzz Aldrin","Yuri Gagarin","John Glenn"],
+[3,"How many wives did Henry VIII have?","6","4","5","8"],
+[3,"In which year was the Battle of Hastings?","1066","1166","966","1215"],
+[3,"What is the name of Harry Potter's owl?","Hedwig","Errol","Hermes","Pigwidgeon"],
+[3,"What is the address of the Prime Minister's official home in London?","10 Downing Street","1 Downing Street","10 Whitehall","221B Baker Street"],
+[3,"What is the name of the tunnel under the sea between England and France?","The Channel Tunnel","The Dover Tunnel","The Euro Link","The Strait Tunnel"],
+[4,"How many pieces does each player have at the start of a game of chess?","16","12","18","20"],
+[4,"In which year did the Titanic sink?","1912","1905","1918","1923"],
+[4,"What was the name of Henry VIII's warship that sank in 1545?","The Mary Rose","The Golden Hind","HMS Victory","The Cutty Sark"],
+[4,"In which year was the Great Fire of London?","1666","1066","1605","1766"],
+[4,"How many squares are there on a chessboard?","64","32","100","81"],
+[4,"On a UK Monopoly board, which is the most expensive property?","Mayfair","Park Lane","Bond Street","Oxford Street"],
+[4,"Who was the UK's first female Prime Minister?","Margaret Thatcher","Theresa May","Barbara Castle","Shirley Williams"],
+[4,"Which is the oldest TV soap opera still on air in the UK?","Coronation Street","EastEnders","Emmerdale","Hollyoaks"],
+[4,"In which year did the UK vote to leave the European Union?","2016","2014","2018","2019"],
+[4,"Which Tudor queen was known as the Virgin Queen?","Elizabeth I","Mary I","Anne Boleyn","Lady Jane Grey"],
+[4,"Which British monarch reigned for the longest?","Elizabeth II","Victoria","George III","Henry VIII"],
+[4,"In tennis, what is a score of zero called?","Love","Nil","Duck","Nought"],
+[4,"In which town was William Shakespeare born?","Stratford-upon-Avon","Bath","Oxford","Canterbury"],
+[4,"What is a group of owls called?","A parliament","A murder","A colony","A gaggle"],
+[4,"Which famous author created Hercule Poirot?","Agatha Christie","Arthur Conan Doyle","Ian Fleming","Enid Blyton"],
+[5,"In which year was the first Harry Potter book published in the UK?","1997","1995","1999","2001"],
+[5,"How many tiles are in a standard double-six set of dominoes?","28","24","32","36"],
+[5,"How many points is the letter Z worth in English Scrabble?","10","8","5","12"],
+[5,"What was the name of the ship Charles Darwin sailed around the world on?","HMS Beagle","HMS Victory","HMS Endeavour","HMS Bounty"],
+[5,"What does a philatelist collect?","Stamps","Coins","Butterflies","Postcards"],
+[5,"In which year did the Berlin Wall fall?","1989","1991","1985","1979"],
+[5,"What is a group of crows called?","A murder","A parliament","A pride","A gaggle"],
+[5,"In cricket, what is it called when a batter is out without scoring?","A duck","A love","A nil","An egg"],
+[5,"What is the name of the Royal Navy flagship Nelson commanded at Trafalgar?","HMS Victory","HMS Belfast","HMS Warrior","HMS Ark Royal"],
+[5,"Which Roman emperor ordered a wall to be built across northern England?","Hadrian","Julius Caesar","Nero","Claudius"],
+[5,"How many people sit in the jury at a Crown Court trial in England?","12","10","9","15"]
+],
+geo: [
+[1,"What is the capital city of England?","London","Manchester","Birmingham","Liverpool"],
+[1,"Which country is famous for the Eiffel Tower?","France","Italy","Spain","Germany"],
+[1,"What do we call a large, dry, sandy place with very little rain?","A desert","A jungle","A swamp","A meadow"],
+[1,"Which country is directly north of England?","Scotland","Wales","Ireland","Norway"],
+[1,"Which country do kangaroos come from?","Australia","New Zealand","South Africa","Brazil"],
+[1,"What do we call a piece of land with water all around it?","An island","A valley","A desert","A forest"],
+[1,"What do we call a very tall hill with a peak?","A mountain","A valley","A river","A beach"],
+[1,"What is the capital city of the United Kingdom?","London","Edinburgh","Cardiff","Belfast"],
+[1,"Which country is Wales joined on to?","England","Scotland","France","Ireland"],
+[1,"What do we call the huge areas of salty water that cover most of the Earth?","Oceans","Lakes","Rivers","Ponds"],
+[1,"Which of these places is the coldest?","The North Pole","The desert","The beach","The jungle",1],
+[1,"Which of these animals lives in the Arctic?","The polar bear","The lion","The kangaroo","The camel",1],
+[1,"What do we call water that flows downhill all the way to the sea?","A river","A lake","A pond","A puddle"],
+[1,"On a compass, which direction is opposite north?","South","East","West","Up"],
+[1,"In which country is Big Ben?","England","France","USA","Spain"],
+[1,"Which country is famous for pizza and pasta?","Italy","France","Greece","Spain"],
+[1,"What do we call a small place with a few houses, smaller than a town?","A village","A city","A country","A continent"],
+[1,"What colour is the sea on most maps?","Blue","Green","Brown","Yellow"],
+[1,"Where does this animal usually live?","In the desert","In the jungle","In the Arctic","In the sea",1,"🐪"],
+[1,"In which country do these animals live in the wild?","Australia","China","India","Brazil",1,"🐨"],
+[1,"What do we call this kind of mountain?","A volcano","A glacier","A hill","A cliff",1,"🌋"],
+[2,"What do we call the line on a map where one country ends and another begins?","A border","A coast","A road","A hedge"],
+[2,"In which direction does the Sun rise?","East","West","North","South"],
+[2,"What do we call a book full of maps?","An atlas","A dictionary","A diary","A journal"],
+[2,"This leaf is on the flag of which country?","Canada","USA","Australia","Japan",1,"🍁"],
+[2,"This famous mountain, Mount Fuji, is in which country?","Japan","China","India","Nepal",1,"🗻"],
+[2,"Which yellow flower is a national symbol of Wales?","The daffodil","The rose","The thistle","The tulip"],
+[2,"Which prickly purple plant is a symbol of Scotland?","The thistle","The rose","The daffodil","The shamrock"],
+[2,"Which seaside town is famous for its tower and its autumn illuminations?","Blackpool","Brighton","Scarborough","Skegness"],
+[2,"Most of the Amazon rainforest is in which country?","Brazil","Egypt","Australia","Canada"],
+[2,"What is the capital city of Scotland?","Edinburgh","Glasgow","Aberdeen","Dundee"],
+[2,"Which river flows through London?","The Thames","The Severn","The Mersey","The Tyne"],
+[2,"Which country has a red dragon on its flag?","Wales","Scotland","England","Ireland"],
+[2,"How many continents are there?","7","5","6","8"],
+[2,"In which country would you find the pyramids of Giza?","Egypt","Mexico","Greece","India"],
+[2,"What is the capital city of Wales?","Cardiff","Swansea","Newport","Bangor"],
+[2,"What is the highest mountain in the world?","Mount Everest","K2","Kilimanjaro","Ben Nevis"],
+[2,"Which country is shaped like a boot?","Italy","Spain","Greece","Portugal"],
+[2,"In which Scottish loch is a monster said to live?","Loch Ness","Loch Lomond","Loch Tay","Loch Awe"],
+[2,"In which country would you find the Great Wall?","China","Japan","India","Mongolia"],
+[2,"Which is the coldest continent?","Antarctica","Europe","Asia","North America"],
+[2,"Which country is famous for tulips and windmills?","The Netherlands","Belgium","Denmark","Switzerland"],
+[2,"How many countries make up the United Kingdom?","4","3","5","2"],
+[2,"What is the capital city of France?","Paris","Lyon","Marseille","Nice"],
+[2,"Which American state is home to Hollywood?","California","Florida","Texas","New York"],
+[2,"In which city would you find this famous statue?","New York","Washington, D.C.","Paris","Los Angeles",1,"🗽"],
+[2,"In which country do these animals live in the wild?","China","Japan","India","Australia",1,"🐼"],
+[3,"What is the capital city of Northern Ireland?","Belfast","Derry","Dublin","Armagh"],
+[3,"What is the capital city of the Republic of Ireland?","Dublin","Belfast","Cork","Galway"],
+[3,"What is the capital city of Spain?","Madrid","Barcelona","Seville","Valencia"],
+[3,"What is the capital city of Italy?","Rome","Milan","Venice","Naples"],
+[3,"What is the capital city of Germany?","Berlin","Munich","Frankfurt","Hamburg"],
+[3,"What is the capital city of Japan?","Tokyo","Kyoto","Osaka","Beijing"],
+[3,"What is the capital city of the USA?","Washington, D.C.","New York","Los Angeles","Chicago"],
+[3,"What is the biggest ocean in the world?","The Pacific","The Atlantic","The Indian","The Arctic"],
+[3,"What is the highest mountain in the UK?","Ben Nevis","Yr Wyddfa (Snowdon)","Scafell Pike","Helvellyn"],
+[3,"Which river is usually named as the longest in the world?","The Nile","The Thames","The Mississippi","The Yangtze"],
+[3,"What is the largest country in the world by area?","Russia","Canada","China","USA"],
+[3,"Which is the largest continent?","Asia","Africa","Europe","North America"],
+[3,"On which continent is Egypt?","Africa","Asia","Europe","South America"],
+[3,"Which sea lies between England and the Netherlands?","The North Sea","The Irish Sea","The Baltic Sea","The Mediterranean Sea"],
+[3,"Which ocean lies to the west of the UK?","The Atlantic","The Pacific","The Indian","The Arctic"],
+[3,"Which famous stone circle is on Salisbury Plain?","Stonehenge","Callanish","Castlerigg","Avebury"],
+[3,"Which national park contains Windermere, England's largest lake?","The Lake District","The Peak District","The Yorkshire Dales","Exmoor"],
+[3,"What is the name of the imaginary line around the middle of the Earth?","The Equator","The Prime Meridian","The Tropic of Cancer","The Arctic Circle"],
+[3,"In which Italian city is there a famous leaning tower?","Pisa","Rome","Venice","Florence"],
+[3,"What is the busiest airport in the UK?","Heathrow","Gatwick","Manchester","Stansted"],
+[3,"On which continent is Peru?","South America","Africa","Asia","North America"],
+[4,"What is the capital city of Australia?","Canberra","Sydney","Melbourne","Perth"],
+[4,"What is the capital city of Canada?","Ottawa","Toronto","Vancouver","Montreal"],
+[4,"What is the capital city of Portugal?","Lisbon","Porto","Madrid","Faro"],
+[4,"What is the capital city of Norway?","Oslo","Bergen","Stockholm","Helsinki"],
+[4,"What is the highest mountain in Wales?","Yr Wyddfa (Snowdon)","Pen y Fan","Cadair Idris","Scafell Pike"],
+[4,"What is the highest mountain in England?","Scafell Pike","Helvellyn","Skiddaw","Ben Nevis"],
+[4,"What is the longest river in the UK?","The Severn","The Thames","The Trent","The Wye"],
+[4,"Which is the smallest continent?","Australia (Oceania)","Europe","Antarctica","South America"],
+[4,"What is the largest hot desert in the world?","The Sahara","The Gobi","The Kalahari","The Atacama"],
+[4,"Which part of London does the Prime Meridian run through?","Greenwich","Westminster","Camden","Richmond"],
+[4,"What is the currency of Japan?","The yen","The won","The yuan","The rupee"],
+[4,"Lerwick is the main town of which group of Scottish islands?","Shetland","Orkney","The Outer Hebrides","The Inner Hebrides"],
+[4,"Which island lies in the Irish Sea between Great Britain and Ireland?","The Isle of Man","The Isle of Wight","Jersey","Lundy"],
+[4,"Which volcano buried the Roman town of Pompeii?","Mount Vesuvius","Mount Etna","Stromboli","Mount Fuji"],
+[4,"Which river flows through Paris?","The Seine","The Loire","The Rhine","The Danube"],
+[4,"What is the smallest country in the world?","Vatican City","Monaco","San Marino","Malta"],
+[5,"What is the capital city of New Zealand?","Wellington","Auckland","Christchurch","Queenstown"],
+[5,"What is the capital city of Turkey?","Ankara","Istanbul","Izmir","Antalya"],
+[5,"What is the capital city of Brazil?","Brasília","Rio de Janeiro","São Paulo","Salvador"],
+[5,"What is the capital city of Switzerland?","Bern","Zurich","Geneva","Basel"],
+[5,"What is the capital city of Morocco?","Rabat","Marrakesh","Casablanca","Fez"],
+[5,"Which country has the largest population in the world?","India","China","USA","Indonesia"],
+[5,"What is the largest lake in the UK by area?","Lough Neagh","Loch Ness","Loch Lomond","Windermere"],
+[5,"Near which town does the Angel of the North stand?","Gateshead","Leeds","Durham","Sheffield"],
+[5,"Which English city is nicknamed the Steel City?","Sheffield","Birmingham","Leeds","Coventry"],
+[5,"Which mountain range is often said to separate Europe from Asia?","The Ural Mountains","The Alps","The Pyrenees","The Himalayas"],
+[5,"Which river flows through Budapest and Vienna?","The Danube","The Rhine","The Volga","The Elbe"],
+[5,"What is the most northerly point of mainland Britain?","Dunnet Head","John o' Groats","Cape Wrath","Land's End"]
+],
+sci: [
+[1,"How many legs does a spider have?","8","6","10","4"],
+[1,"Which planet do we live on?","Earth","Mars","Venus","Jupiter"],
+[1,"What do caterpillars turn into?","Butterflies or moths","Bees","Beetles","Dragonflies"],
+[1,"Which animal is known as the King of the Jungle?","The lion","The tiger","The elephant","The gorilla"],
+[1,"Which part of your body pumps blood around it?","The heart","The lungs","The brain","The stomach"],
+[1,"What is a baby frog called?","A tadpole","A cub","A kid","A chick"],
+[1,"What is the tallest animal in the world?","The giraffe","The elephant","The horse","The camel"],
+[1,"Which part of a plant usually grows underground?","The roots","The leaves","The petals","The flowers"],
+[1,"What do pandas mostly eat?","Bamboo","Fish","Grass","Berries"],
+[1,"Which sense do you use your nose for?","Smell","Taste","Hearing","Touch"],
+[1,"What do plants need from the Sun to grow?","Light","Wind","Snow","Sand"],
+[2,"What is the largest animal in the world?","The blue whale","The elephant","The great white shark","The giraffe"],
+[2,"How many legs does an insect have?","6","8","4","10"],
+[2,"What gas do we need to breathe in to stay alive?","Oxygen","Carbon dioxide","Helium","Hydrogen"],
+[2,"Which planet is known as the Red Planet?","Mars","Jupiter","Venus","Mercury"],
+[2,"Which planet is famous for its big, bright rings?","Saturn","Mars","Mercury","Venus"],
+[2,"What force pulls things down to the ground?","Gravity","Magnetism","Friction","Electricity"],
+[2,"What type of animal is a whale?","A mammal","A fish","A reptile","An amphibian"],
+[2,"What do bees collect from flowers to make honey?","Nectar","Water","Seeds","Leaves"],
+[2,"What is the fastest land animal?","The cheetah","The lion","The horse","The gazelle"],
+[2,"What does a thermometer measure?","Temperature","Weight","Speed","Time"],
+[2,"About how long does it take the Earth to travel once around the Sun?","A year","A day","A month","Ten years"],
+[2,"What do we call it when animals sleep through the winter?","Hibernation","Migration","Evaporation","Camouflage"],
+[2,"What kind of animal is this?","A mammal","A bird","A reptile","An insect",1,"🦇"],
+[2,"What kind of animal is this?","A fish","A mammal","A reptile","An amphibian",1,"🦈"],
+[3,"What is the closest star to Earth?","The Sun","The Moon","The North Star","Sirius"],
+[3,"What gas do plants take in from the air?","Carbon dioxide","Oxygen","Helium","Hydrogen"],
+[3,"At what temperature does water boil, in degrees Celsius?","100 degrees","50 degrees","90 degrees","212 degrees"],
+[3,"At what temperature does water freeze, in degrees Celsius?","0 degrees","10 degrees","Minus 10 degrees","32 degrees"],
+[3,"Which is the largest planet in our solar system?","Jupiter","Saturn","Earth","Neptune"],
+[3,"Which planet is closest to the Sun?","Mercury","Venus","Mars","Earth"],
+[3,"How many planets are there in our solar system?","8","9","7","10"],
+[3,"What do we call animals that only eat plants?","Herbivores","Carnivores","Omnivores","Insectivores"],
+[3,"What is the chemical formula for water?","H2O","CO2","O2","NaCl"],
+[3,"What type of animal is a frog?","An amphibian","A reptile","A mammal","A fish"],
+[3,"Which is the largest bird in the world?","The ostrich","The emu","The golden eagle","The albatross"],
+[3,"Who is said to have thought about gravity after seeing an apple fall?","Isaac Newton","Galileo Galilei","Albert Einstein","Charles Darwin"],
+[3,"What is the name of our galaxy?","The Milky Way","Andromeda","Orion","The Solar System"],
+[3,"What do we call animals that are awake at night and sleep in the day?","Nocturnal","Diurnal","Hibernating","Migratory"],
+[3,"About how long does it take the Earth to spin round once?","24 hours","12 hours","A week","A year"],
+[3,"A tortoise is which type of animal?","A reptile","An amphibian","A mammal","An insect",1,"🐢"],
+[4,"How many bones are there in an adult human body?","206","106","186","306"],
+[4,"What is the biggest organ of the human body?","The skin","The liver","The heart","The brain"],
+[4,"What is the chemical symbol for gold?","Au","Ag","Go","Gd"],
+[4,"What is the hardest natural substance?","Diamond","Gold","Iron","Granite"],
+[4,"How many hearts does an octopus have?","3","1","2","8"],
+[4,"What is the centre of an atom called?","The nucleus","The electron","The proton","The core"],
+[4,"Who came up with the theory of evolution by natural selection?","Charles Darwin","Isaac Newton","Albert Einstein","Marie Curie"],
+[4,"What is the name of the process plants use to make food from sunlight?","Photosynthesis","Respiration","Evaporation","Digestion"],
+[4,"Which element does the symbol H stand for?","Hydrogen","Helium","Hafnium","Holmium"],
+[4,"What mainly causes the tides in the sea?","The Moon's gravity","The wind","Earthquakes","Whales swimming"],
+[4,"How many teeth does an adult usually have, including wisdom teeth?","32","28","24","36"],
+[4,"Which blood cells help your body fight infection?","White blood cells","Red blood cells","Platelets","Plasma"],
+[5,"What colour does blue litmus paper turn in acid?","Red","Green","Yellow","Purple"],
+[5,"Roughly how fast does light travel?","300,000 km per second","30,000 km per second","3,000 km per second","3 million km per second"],
+[5,"What is the most common gas in the Earth's air?","Nitrogen","Oxygen","Carbon dioxide","Argon"],
+[5,"What is the chemical symbol for sodium?","Na","So","S","Sd"],
+[5,"What is the chemical symbol for iron?","Fe","Ir","In","I"],
+[5,"Which planet has a giant storm called the Great Red Spot?","Jupiter","Mars","Saturn","Neptune"],
+[5,"Which metal is a liquid at room temperature?","Mercury","Lead","Tin","Aluminium"],
+[5,"What do we call animals that have a backbone?","Vertebrates","Invertebrates","Arthropods","Molluscs"],
+[5,"Which element has the atomic number 1?","Hydrogen","Helium","Oxygen","Carbon"],
+[5,"What is the longest bone in the human body?","The femur (thigh bone)","The spine","The humerus","The tibia"],
+[5,"Which scientist won Nobel Prizes in both physics and chemistry?","Marie Curie","Albert Einstein","Rosalind Franklin","Niels Bohr"]
+],
+mus: [
+[1,"Which instrument has black and white keys?","The piano","The guitar","The drum","The violin"],
+[1,"Which instrument do you hit with sticks?","The drum","The flute","The trumpet","The harp"],
+[1,"Which instrument do lots of children in the UK learn to blow first at school?","The recorder","The trumpet","The tuba","The bagpipes"],
+[1,"Which instrument has wooden or metal bars that you hit with beaters?","The xylophone","The recorder","The harp","The violin"],
+[1,"Which instrument do you shake to make a rattling sound?","Maracas","A triangle","A xylophone","A recorder"],
+[1,"Which metal instrument is shaped like a triangle and goes 'ting' when you hit it?","The triangle","The drum","The maracas","The tambourine"],
+[1,"How many people sing in a duet?","2","1","3","4"],
+[1,"Which of these is a musical instrument?","A trumpet","A kettle","A pillow","A teapot",1],
+[1,"What do you use to play a violin?","A bow","A drumstick","A paintbrush","A feather"],
+[1,"What do we call a gentle song that helps a baby fall asleep?","A lullaby","An anthem","A march","A jingle"],
+[1,"Which nursery rhyme asks a sheep if it has any wool?","Baa Baa Black Sheep","Mary Had a Little Lamb","Little Bo Peep","Old MacDonald Had a Farm"],
+[1,"Which nursery rhyme is about a spider climbing up the water spout?","Incy Wincy Spider","Hickory Dickory Dock","Humpty Dumpty","Jack and Jill"],
+[1,"In Hickory Dickory Dock, what runs up the clock?","A mouse","A cat","A spider","A bird"],
+[1,"Which instrument is this?","A trumpet","A trombone","A tuba","A recorder",1,"🎺"],
+[1,"Which instrument is this?","A violin","A cello","A guitar","A harp",1,"🎻"],
+[1,"Which instrument is this?","A drum","A tambourine","A bell","A piano",1,"🥁"],
+[1,"Which instrument is this?","A guitar","A violin","A banjo","A harp",1,"🎸"],
+[1,"Which instrument is this?","A piano","A xylophone","A harp","An accordion",1,"🎹"],
+[2,"What do we call the person who stands at the front and leads an orchestra?","The conductor","The captain","The driver","The referee"],
+[2,"Which instrument is this?","A saxophone","A trumpet","A clarinet","A flute",1,"🎷"],
+[2,"Which instrument is this?","An accordion","The bagpipes","A piano","A harmonica",1,"🪗"],
+[2,"Which big brass instrument plays very low notes?","The tuba","The trumpet","The flute","The violin"],
+[2,"Which singer had a big hit with the song Happy?","Pharrell Williams","Ed Sheeran","Justin Bieber","Bruno Mars"],
+[2,"On which TV talent show can a judge press the golden buzzer?","Britain's Got Talent","The Voice","Strictly Come Dancing","The X Factor"],
+[2,"On which TV show do celebrities learn dances like the waltz and the cha-cha?","Strictly Come Dancing","Britain's Got Talent","The Voice","The Great British Bake Off"],
+[2,"On The Voice UK, what do the coaches sit in?","Spinning chairs","Thrones","Beanbags","A bus"],
+[2,"How many strings does a violin have?","4","6","3","5"],
+[2,"Which girl group was formed on The X Factor in 2011?","Little Mix","The Spice Girls","Girls Aloud","Sugababes"],
+[2,"What is the UK's national anthem called?","God Save the King","Rule, Britannia!","Land of Hope and Glory","Jerusalem"],
+[2,"Which small, four-stringed instrument is often linked with Hawaii?","The ukulele","The banjo","The violin","The harp"],
+[2,"How many strings does a standard guitar have?","6","4","5","8"],
+[2,"What do we call a group of people who sing together?","A choir","An orchestra","A herd","A team"],
+[2,"Which band from Liverpool were known as the Fab Four?","The Beatles","The Rolling Stones","Queen","Oasis"],
+[2,"Which singer had huge hits with Shape of You and Perfect?","Ed Sheeran","Lewis Capaldi","Harry Styles","Sam Smith"],
+[2,"Which singer had hits with Shake It Off and Anti-Hero?","Taylor Swift","Katy Perry","Ariana Grande","Billie Eilish"],
+[2,"Which boy band was Harry Styles in?","One Direction","Take That","Westlife","The Wanted"],
+[2,"How many musicians are there in a quartet?","4","3","5","8"],
+[2,"Which instrument is often linked with Scotland?","The bagpipes","The banjo","The accordion","The sitar"],
+[2,"Which instrument is held under the chin and played with a bow?","The violin","The cello","The guitar","The harp"],
+[3,"Which is the biggest instrument in the string family?","The double bass","The cello","The violin","The viola"],
+[3,"Which band had a big hit with Bohemian Rhapsody?","Queen","The Beatles","ABBA","Oasis"],
+[3,"Which Swedish group won Eurovision in 1974 with Waterloo?","ABBA","Roxette","Europe","Ace of Base"],
+[3,"Which singer had hits with Hello and Someone Like You?","Adele","Dua Lipa","Rita Ora","Jess Glynne"],
+[3,"Which brass instrument has a slide?","The trombone","The trumpet","The tuba","The French horn"],
+[3,"Which singer was known as the King of Rock and Roll?","Elvis Presley","Michael Jackson","Chuck Berry","Little Richard"],
+[3,"Who is known as the King of Pop?","Michael Jackson","Elvis Presley","Prince","Justin Bieber"],
+[3,"Which Manchester band had a hit with Wonderwall?","Oasis","Blur","Pulp","Coldplay"],
+[3,"Which girl group had a 1990s hit with Wannabe?","The Spice Girls","All Saints","Little Mix","Girls Aloud"],
+[3,"Which singer released the song Bad Guy?","Billie Eilish","Olivia Rodrigo","Lorde","Dua Lipa"],
+[3,"Which singer had hits with Firework and Roar?","Katy Perry","Taylor Swift","Jessie J","Rihanna"],
+[3,"Which musical film features the song Do-Re-Mi?","The Sound of Music","Mary Poppins","Oliver!","Annie"],
+[4,"Which instrument has 47 strings and pedals?","The harp","The piano","The cello","The guitar"],
+[4,"Which UK city hosted Eurovision in 2023?","Liverpool","Glasgow","London","Birmingham"],
+[4,"What does 'forte' mean in music?","Loud","Quiet","Fast","Slow"],
+[4,"Which composer wrote The Four Seasons?","Antonio Vivaldi","Wolfgang Amadeus Mozart","Johann Sebastian Bach","Ludwig van Beethoven"],
+[4,"Which composer kept writing music even after he became deaf?","Ludwig van Beethoven","Wolfgang Amadeus Mozart","George Frideric Handel","Frédéric Chopin"],
+[4,"What is the small, high-pitched cousin of the flute called?","The piccolo","The oboe","The clarinet","The bassoon"],
+[4,"What are the five lines that music is written on called?","A stave","A ladder","A bar","A grid"],
+[4,"What is the surname of the brothers who led Oasis?","Gallagher","Mitchell","Davies","Kelly"],
+[4,"Chris Martin is the lead singer of which band?","Coldplay","Keane","Snow Patrol","Muse"],
+[4,"What is the highest female singing voice called?","Soprano","Alto","Tenor","Bass"],
+[4,"What is the lowest male singing voice called?","Bass","Tenor","Baritone","Alto"],
+[4,"Which singer released the album Future Nostalgia?","Dua Lipa","Rita Ora","Adele","Raye"],
+[4,"Which singer released the song Drivers License?","Olivia Rodrigo","Billie Eilish","Sabrina Carpenter","Gracie Abrams"],
+[4,"Which musical features the song Defying Gravity?","Wicked","Hamilton","Les Misérables","Matilda"],
+[4,"Which Andrew Lloyd Webber musical is set in a Paris opera house?","The Phantom of the Opera","Evita","Cats","Starlight Express"],
+[4,"In The Greatest Showman, which real person does Hugh Jackman play?","P.T. Barnum","Harry Houdini","Walt Disney","Buffalo Bill"],
+[4,"How many beats are in each bar of music in 4/4 time?","4","2","3","8"],
+[5,"As a music instruction, what does 'piano' mean?","Play quietly","Play loudly","Play quickly","Play slowly"],
+[5,"Who wrote the music for the Hallelujah Chorus in Messiah?","George Frideric Handel","Johann Sebastian Bach","Joseph Haydn","Edward Elgar"],
+[5,"Which English composer wrote the Pomp and Circumstance marches?","Edward Elgar","Gustav Holst","Benjamin Britten","Ralph Vaughan Williams"],
+[5,"Who composed The Planets suite?","Gustav Holst","Edward Elgar","Benjamin Britten","Johann Strauss"],
+[5,"What was Ginger Spice's real first name?","Geri","Emma","Mel","Victoria"],
+[5,"Which singer was born Reginald Dwight?","Elton John","David Bowie","Freddie Mercury","Rod Stewart"],
+[5,"Which singer was born Stefani Germanotta?","Lady Gaga","Madonna","Pink","Gwen Stefani"],
+[5,"Which Welsh singer had a 1965 hit with It's Not Unusual?","Tom Jones","Shirley Bassey","Bonnie Tyler","Charlotte Church"],
+[5,"Which UK act won Eurovision in 1997?","Katrina and the Waves","Bucks Fizz","Brotherhood of Man","Sandie Shaw"],
+[5,"What is a group of eight musicians called?","An octet","A sextet","A nonet","A quintet"],
+[5,"What does 'a cappella' mean?","Singing without instruments","Singing very fast","Singing very loudly","Singing in a church"]
+],
+dis: [
+[1,"What kind of animal is Simba?","A lion","A tiger","A bear","A cheetah"],
+[1,"What is the name of the snowman in Frozen?","Olaf","Sven","Kristoff","Hans"],
+[1,"What is the name of Elsa's sister?","Anna","Ariel","Belle","Moana"],
+[1,"What kind of animal is Dumbo?","An elephant","A mouse","A rabbit","A horse"],
+[1,"What is the name of the blue fish who helps look for Nemo?","Dory","Marlin","Bruce","Gill"],
+[1,"Who is Mickey Mouse's girlfriend?","Minnie Mouse","Daisy Duck","Clarabelle Cow","Molly Mouse"],
+[1,"In Toy Story, what is the name of the cowboy toy?","Woody","Buzz","Rex","Slinky"],
+[1,"In Up, how does Carl make his house fly?","With balloons","With a rocket","With wings","With a giant kite"],
+[1,"In Ratatouille, what does Remy the rat want to be?","A chef","A singer","A pilot","A doctor"],
+[1,"How many dwarfs are there in Snow White?","7","5","6","8"],
+[1,"What does Cinderella leave behind at the ball?","A glass slipper","A crown","A necklace","A handbag"],
+[1,"What is the name of Winnie the Pooh's bouncy tiger friend?","Tigger","Piglet","Eeyore","Roo"],
+[1,"What kind of animal is Bambi?","A deer","A rabbit","A fox","A horse"],
+[1,"In Pinocchio, what happens when Pinocchio tells a lie?","His nose grows","His ears grow","He turns blue","He sneezes"],
+[1,"Which Disney film has the song Let It Go?","Frozen","Moana","Tangled","Encanto"],
+[1,"Which Disney or Pixar film do these emoji show?","The Lion King","Zootropolis","The Jungle Book","Bambi",1,"🦁👑"],
+[1,"Which Disney or Pixar film do these emoji show?","Frozen","Tangled","Brave","Moana",1,"❄️👭⛄"],
+[1,"Which Disney or Pixar film do these emoji show?","Finding Nemo","The Little Mermaid","Luca","Moana",1,"🐠🔍"],
+[1,"Which Disney or Pixar film do these emoji show?","Aladdin","Hercules","Moana","Mulan",1,"🧞🪔"],
+[1,"Which Disney or Pixar film do these emoji show?","Cars","Toy Story","Up","WALL-E",1,"🚗⚡🏁"],
+[1,"Which Disney or Pixar film do these emoji show?","Winnie the Pooh","The Jungle Book","Brave","Bambi",1,"🐻🍯🎈"],
+[2,"What kind of fish is Nemo?","A clownfish","A goldfish","A blue tang","A shark"],
+[2,"What is Donald Duck's girlfriend called?","Daisy Duck","Minnie Mouse","Della Duck","Clarice"],
+[2,"What is the name of the boy who owns Woody and Buzz in Toy Story?","Andy","Sid","Max","Tom"],
+[2,"In The Lion King, what is the name of Simba's dad?","Mufasa","Scar","Rafiki","Zazu"],
+[2,"In The Lion King, what is the name of Simba's wicked uncle?","Scar","Mufasa","Zazu","Rafiki"],
+[2,"Which two friends teach Simba to say Hakuna Matata?","Timon and Pumbaa","Zazu and Rafiki","Nala and Sarabi","Shenzi and Banzai"],
+[2,"In The Little Mermaid, what is the name of Ariel's crab friend?","Sebastian","Flounder","Scuttle","Triton"],
+[2,"In Beauty and the Beast, what is the name of the kind teapot?","Mrs Potts","Lumière","Cogsworth","Babette"],
+[2,"Which film features the demigod Maui?","Moana","Hercules","Lilo & Stitch","Encanto"],
+[2,"In Encanto, which family member do they say 'we don't talk about'?","Bruno","Camilo","Julieta","Agustín"],
+[2,"In Coco, which instrument does Miguel dream of playing?","The guitar","The trumpet","The piano","The drums"],
+[2,"Which Pixar film is set inside a girl's head, with her emotions as characters?","Inside Out","Soul","Brave","Up"],
+[2,"In Inside Out, which emotion is blue?","Sadness","Joy","Fear","Disgust"],
+[2,"In Zootropolis, what kind of animal is Judy Hopps?","A rabbit","A fox","A sloth","A sheep"],
+[2,"In Cars, what kind of vehicle is Mater?","A tow truck","A fire engine","A bus","A taxi"],
+[2,"In Monsters, Inc., what is the name of the little girl?","Boo","Lilo","Agnes","Riley"],
+[2,"In Monsters, Inc., what is the name of the green, one-eyed monster?","Mike Wazowski","Sulley","Randall","Roz"],
+[2,"Where is Lilo & Stitch set?","Hawaii","Fiji","Tahiti","Jamaica"],
+[2,"In 101 Dalmatians, who wants to make a coat out of the puppies?","Cruella de Vil","Ursula","Maleficent","Madam Mim"],
+[2,"What turns into Cinderella's carriage?","A pumpkin","An apple","A cabbage","A shoe"],
+[2,"Which Disney heroine pretends to be a soldier to save her father?","Mulan","Pocahontas","Merida","Tiana"],
+[2,"In Frozen, what is the name of Kristoff's reindeer?","Sven","Olaf","Rudolph","Hans"],
+[2,"What is the name of Winnie the Pooh's gloomy donkey friend?","Eeyore","Tigger","Piglet","Kanga"],
+[2,"What is the name of Bambi's rabbit friend?","Thumper","Flower","Hopper","Jack"],
+[2,"In The Jungle Book, what is the name of the boy raised by wolves?","Mowgli","Baloo","Bagheera","Kaa"],
+[2,"In The Jungle Book, what kind of animal is Baloo?","A bear","A panther","A tiger","A snake"],
+[2,"Which nanny can fly using her umbrella?","Mary Poppins","Nanny McPhee","Miss Honey","Mrs Doubtfire"],
+[2,"In Peter Pan, which animal is always chasing Captain Hook?","A crocodile","A shark","A whale","A snake"],
+[2,"In Turning Red, what does Mei turn into?","A red panda","A fox","A bear","A dragon"],
+[2,"Which Disney film has the song A Whole New World?","Aladdin","The Little Mermaid","Pocahontas","Tangled"],
+[2,"Which Disney film has the song Under the Sea?","The Little Mermaid","Moana","Finding Nemo","Lilo & Stitch"],
+[2,"Which Disney or Pixar film do these emoji show?","Up","Coco","Toy Story","Cars",1,"🎈🏠👴"],
+[2,"Which Disney or Pixar film do these emoji show?","Ratatouille","Zootropolis","Pinocchio","Lady and the Tramp",1,"🐀👨‍🍳"],
+[2,"Which Disney or Pixar film do these emoji show?","Beauty and the Beast","Sleeping Beauty","Tangled","Snow White",1,"🌹🏰🕯️"],
+[2,"Which Disney or Pixar film do these emoji show?","Snow White and the Seven Dwarfs","Sleeping Beauty","Cinderella","Tangled",1,"🍎👸⛏️"],
+[2,"Which Disney or Pixar film do these emoji show?","Cinderella","Sleeping Beauty","Snow White","Frozen",1,"🎃👠🕛"],
+[2,"Which Disney or Pixar film do these emoji show?","Moana","Lilo & Stitch","Luca","The Little Mermaid",1,"🌊🛶🐓"],
+[2,"Which Disney or Pixar film do these emoji show?","Toy Story","Cars","Up","Monsters, Inc.",1,"🤠🚀🧸"],
+[2,"Which Disney or Pixar film do these emoji show?","Dumbo","The Jungle Book","Bambi","Zootropolis",1,"🐘👂🎪"],
+[2,"Which Disney or Pixar film do these emoji show?","The Little Mermaid","Moana","Finding Nemo","Luca",1,"🧜‍♀️🦀🔱"],
+[3,"Which Disney princess has a pet tiger called Rajah?","Jasmine","Mulan","Pocahontas","Moana"],
+[3,"What is the name of the sea witch in The Little Mermaid?","Ursula","Maleficent","Cruella","Yzma"],
+[3,"In Beauty and the Beast, what kind of object is Lumière?","A candlestick","A clock","A teapot","A wardrobe"],
+[3,"In Aladdin, what is the name of Aladdin's monkey?","Abu","Iago","Rajah","Apu"],
+[3,"What is the name of the villain in Aladdin?","Jafar","Hades","Scar","Gaston"],
+[3,"What is the name of the villain in Beauty and the Beast?","Gaston","Jafar","Hans","Ratcliffe"],
+[3,"In Moana, what kind of animal is Heihei?","A rooster","A pig","A crab","A parrot"],
+[3,"In Zootropolis, what kind of animal is Nick Wilde?","A fox","A wolf","A raccoon","A weasel"],
+[3,"In WALL-E, what is the name of the sleek white robot WALL-E falls for?","EVE","AUTO","M-O","ROSIE"],
+[3,"In Monsters, Inc., what is used to power the city of Monstropolis?","Children's screams","Sunshine","Sweets","Water"],
+[3,"In Sleeping Beauty, what does Aurora prick her finger on?","A spinning wheel","A rose thorn","A sewing needle","A sword"],
+[3,"In Snow White, which dwarf never speaks?","Dopey","Sleepy","Bashful","Happy"],
+[3,"In Tangled, what is Rapunzel's pet chameleon called?","Pascal","Maximus","Meeko","Abu"],
+[3,"In Mulan, what is the name of the little red dragon?","Mushu","Cri-Kee","Khan","Shang"],
+[3,"In Brave, which country is Merida from?","Scotland","Ireland","Wales","Norway"],
+[3,"In Frozen, which kingdom does Elsa rule?","Arendelle","Corona","Agrabah","Atlantica"],
+[3,"In Hercules, who is the main villain?","Hades","Zeus","Jafar","Scar"],
+[3,"In Luca, what are Luca and Alberto secretly?","Sea monsters","Mermaids","Fish","Aliens"],
+[3,"In The Jungle Book, what kind of animal is Shere Khan?","A tiger","A lion","A panther","A wolf"],
+[3,"What is the name of Pinocchio's cricket friend?","Jiminy Cricket","Timothy Cricket","Cri-Kee","Jasper Cricket"],
+[3,"In Peter Pan, what is the name of the fairy?","Tinker Bell","Silvermist","Tiger Lily","Wendy"],
+[3,"Which Disney film has the song You're Welcome?","Moana","Aladdin","Hercules","Encanto"],
+[3,"Which Pixar film has the song You've Got a Friend in Me?","Toy Story","Cars","Monsters, Inc.","Up"],
+[3,"Which Disney or Pixar film do these emoji show?","Coco","Encanto","Soul","Onward",1,"💀🎸🌼"],
+[3,"Which Disney or Pixar film do these emoji show?","Zootropolis","Bolt","The Fox and the Hound","Bambi",1,"🦊🐰🚓"],
+[3,"Which Disney or Pixar film do these emoji show?","Monsters, Inc.","Coco","Inside Out","Onward",1,"👹🚪😱"],
+[3,"Which Disney or Pixar film do these emoji show?","Inside Out","Encanto","Soul","Up",1,"😀😢😡😱🤢"],
+[3,"Which Disney or Pixar film do these emoji show?","Tangled","Brave","Frozen","Sleeping Beauty",1,"🏰💇‍♀️🦎"],
+[3,"Which Disney or Pixar film do these emoji show?","WALL-E","Big Hero 6","Toy Story","Up",1,"🤖🌱"],
+[3,"Which Disney or Pixar film do these emoji show?","Lady and the Tramp","101 Dalmatians","Bolt","The Fox and the Hound",1,"🐶🍝"],
+[3,"Which Disney or Pixar film do these emoji show?","Lilo & Stitch","Moana","Luca","Toy Story",1,"👽🌺🏄"],
+[3,"Which Disney or Pixar film do these emoji show?","Pinocchio","Peter Pan","Dumbo","Bambi",1,"🪵👃🦗"],
+[4,"In Moana, what is the name of Moana's pet pig?","Pua","Heihei","Pumbaa","Hamm"],
+[4,"In Encanto, what is the family's surname?","Madrigal","Rivera","Martinez","Alvarez"],
+[4,"What racing number does Lightning McQueen have?","95","43","86","1"],
+[4,"In Lilo & Stitch, what experiment number is Stitch?","626","525","101","007"],
+[4,"In Sleeping Beauty, what name does Aurora go by while hidden in the forest?","Briar Rose","Rose Red","Little Rose","Wild Rose"],
+[4,"In The Princess and the Frog, which city is the story set in?","New Orleans","Paris","New York","Chicago"],
+[4,"What is the name of the kingdom in Aladdin?","Agrabah","Arendelle","Corona","Motunui"],
+[4,"What was Disney's first full-length animated film, from 1937?","Snow White and the Seven Dwarfs","Pinocchio","Fantasia","Bambi"],
+[4,"What was the very first Pixar feature film?","Toy Story","A Bug's Life","Monsters, Inc.","Cars"],
+[4,"In Raya and the Last Dragon, what is the dragon called?","Sisu","Mushu","Elliott","Namaari"],
+[4,"Which Pixar film has the song Remember Me?","Coco","Encanto","Soul","Up"],
+[4,"Which Disney or Pixar film do these emoji show?","Mary Poppins","Peter Pan","Pinocchio","Up",1,"☂️🪁🎠"],
+[4,"Which Disney or Pixar film do these emoji show?","Encanto","Coco","Moana","Tangled",1,"🕯️🏡🦋"],
+[4,"Which Disney or Pixar film do these emoji show?","Turning Red","Zootropolis","Luca","Brave",1,"🔴🐼"],
+[4,"Which Disney or Pixar film do these emoji show?","Mulan","Tangled","Moana","Brave",1,"🐉⚔️🏯"],
+[5,"In Tangled, what is Flynn Rider's real name?","Eugene Fitzherbert","Edward Rider","Frederick Flynn","Eric Fitzwilliam"],
+[5,"In Mary Poppins, on which street do the Banks family live?","Cherry Tree Lane","Baker Street","Privet Drive","Downing Street"],
+[5,"In Wish (2023), what is the name of the heroine?","Asha","Mirabel","Raya","Meilin"],
+[5,"What is the name of Captain Hook's right-hand man?","Mr Smee","Mr Starkey","Mr Bones","Mr Jukes"],
+[5,"In The Lion King, what kind of animal is Rafiki?","A mandrill","A chimpanzee","A gorilla","A lemur"],
+[5,"In Frozen, what kind of creatures adopted Kristoff as a boy?","Trolls","Elves","Snow giants","Dwarfs"],
+[5,"In Toy Story 2, what is the name of Woody's horse?","Bullseye","Maximus","Khan","Buttercup"],
+[5,"In Up, what is the name of the friendly talking dog who joins Carl?","Dug","Kevin","Russell","Muntz"]
+],
+mat: [
+[2,"How many pence are there in £1?","100","10","50","1,000"],
+[2,"How many 2p coins make 10p?","5","2","4","10"],
+[2,"You pay for a 60p chocolate bar with a £1 coin. How much change do you get?","40p","30p","50p","60p"],
+[2,"What is half of 20?","10","5","15","2"],
+[3,"How many centimetres are in a metre?","100","10","1,000","60"],
+[3,"How many grams are in a kilogram?","1,000","100","10","500"],
+[3,"What comes next: 2, 4, 8, 16 ...?","32","24","20","30"],
+[3,"What is the Roman numeral for 10?","X","V","L","C"],
+[3,"How many faces does a cube have?","6","4","8","12"],
+[3,"How many minutes are in two and a half hours?","150","130","120","250"],
+[3,"What is 0.25 as a fraction?","1/4","1/2","2/5","1/25"],
+[4,"How many degrees are in a right angle?","90","45","180","360"],
+[4,"What do the three angles inside a triangle add up to?","180 degrees","90 degrees","360 degrees","270 degrees"],
+[4,"Which number does the Roman numeral L stand for?","50","100","500","5"],
+[4,"How many seconds are in an hour?","3,600","360","6,000","600"],
+[4,"How many days are there in a leap year?","366","365","364","367"],
+[4,"How many edges does a cube have?","12","6","8","24"],
+[4,"A pizza is cut into 8 slices and you eat 2. What fraction is left?","3/4","1/4","2/3","5/8"],
+[4,"What is the next prime number after 13?","17","15","19","21"],
+[4,"A train leaves at 10:45 and the journey takes 1 hour and 25 minutes. When does it arrive?","12:10","12:20","11:10","12:00"],
+[5,"What is pi to two decimal places?","3.14","3.41","3.16","3.12"],
+[5,"How many sides does a dodecagon have?","12","10","20","11"],
+[5,"What year is written as MMXXVI in Roman numerals?","2026","2016","2024","1976"],
+[5,"What is 1/8 as a decimal?","0.125","0.8","0.18","0.25"],
+[5,"How many millilitres are in 3.5 litres?","3,500","350","35,000","3,050"]
+]
+};
+
+const CATS = {
+  gk:{name:"General Knowledge",icon:"💡"}, geo:{name:"Geography",icon:"🌍"}, mus:{name:"Music",icon:"🎵"},
+  sci:{name:"Science",icon:"🔬"}, mat:{name:"Maths",icon:"🔢"}, dis:{name:"Disney",icon:"🏰"}
+};
+
+/* ---------- Flags (drawn, so they work offline) ---------- */
+const FLAGS = [
+  ["England",1,{t:"cross",bg:"#FFFFFF",c:"#CE1124"}],
+  ["the United Kingdom",1,{t:"uk"}],
+  ["Japan",1,{t:"disc",bg:"#FFFFFF",c:"#BC002D",x:.5}],
+  ["France",2,{t:"v",c:["#0055A4","#FFFFFF","#EF4135"]}],
+  ["Scotland",2,{t:"saltire"}],
+  ["Italy",2,{t:"v",c:["#009246","#FFFFFF","#CE2B37"]}],
+  ["Germany",2,{t:"h",c:["#000000","#DD0000","#FFCE00"]}],
+  ["Ireland",2,{t:"v",c:["#169B62","#FFFFFF","#FF883E"]}],
+  ["Spain",3,{t:"h",c:["#AA151B","#F1BF00","#AA151B"],r:[1,2,1]}],
+  ["Switzerland",3,{t:"swiss"}],
+  ["Sweden",3,{t:"nordic",bg:"#006AA7",c:"#FECC00"}],
+  ["the Netherlands",3,{t:"h",c:["#AE1C28","#FFFFFF","#21468B"]}],
+  ["Greece",3,{t:"greece"}],
+  ["Ukraine",3,{t:"h",c:["#0057B7","#FFD700"]}],
+  ["Poland",3,{t:"h",c:["#FFFFFF","#DC143C"]}],
+  ["Denmark",3,{t:"nordic",bg:"#C8102E",c:"#FFFFFF"}],
+  ["Belgium",4,{t:"v",c:["#000000","#FDDA24","#EF3340"]}],
+  ["Norway",4,{t:"nordic",bg:"#BA0C2F",c:"#FFFFFF",i:"#00205B"}],
+  ["Finland",4,{t:"nordic",bg:"#FFFFFF",c:"#002F6C"}],
+  ["Russia",4,{t:"h",c:["#FFFFFF","#0039A6","#D52B1E"]}],
+  ["Austria",4,{t:"h",c:["#ED2939","#FFFFFF","#ED2939"]}],
+  ["Nigeria",4,{t:"v",c:["#008751","#FFFFFF","#008751"]}],
+  ["Colombia",4,{t:"h",c:["#FCD116","#003893","#CE1126"],r:[2,1,1]}],
+  ["Hungary",5,{t:"h",c:["#CE2939","#FFFFFF","#477050"]}],
+  ["Iceland",5,{t:"nordic",bg:"#02529C",c:"#FFFFFF",i:"#DC1E35"}],
+  ["Bangladesh",5,{t:"disc",bg:"#006A4E",c:"#F42A41",x:.45}],
+  ["Estonia",5,{t:"h",c:["#0072CE","#000000","#FFFFFF"]}],
+  ["Lithuania",5,{t:"h",c:["#FDB913","#006A44","#C1272D"]}],
+  ["Bulgaria",5,{t:"h",c:["#FFFFFF","#00966E","#D62612"]}],
+  ["Thailand",5,{t:"h",c:["#A51931","#F4F5F8","#2D2A4A","#F4F5F8","#A51931"],r:[1,1,2,1,1]}],
+  ["Peru",5,{t:"v",c:["#D91023","#FFFFFF","#D91023"]}]
+];
+
+function flagSVG(s){
+  const W=300,H=200; let b="";
+  const stripes=(dir)=>{const r=s.r||s.c.map(()=>1),tot=r.reduce((a,x)=>a+x,0);let p=0;
+    s.c.forEach((col,i)=>{const len=(dir==="h"?H:W)*r[i]/tot;
+      b+= dir==="h"?`<rect x="0" y="${p}" width="${W}" height="${len+.5}" fill="${col}"/>`:`<rect x="${p}" y="0" width="${len+.5}" height="${H}" fill="${col}"/>`;p+=len;});};
+  if(s.t==="h"||s.t==="v") stripes(s.t);
+  else if(s.t==="disc"){b=`<rect width="${W}" height="${H}" fill="${s.bg}"/><circle cx="${W*s.x}" cy="${H/2}" r="${H*0.3}" fill="${s.c}"/>`;}
+  else if(s.t==="cross"){b=`<rect width="${W}" height="${H}" fill="${s.bg}"/><rect x="${W/2-20}" y="0" width="40" height="${H}" fill="${s.c}"/><rect x="0" y="${H/2-20}" width="${W}" height="40" fill="${s.c}"/>`;}
+  else if(s.t==="nordic"){const vx=95;b=`<rect width="${W}" height="${H}" fill="${s.bg}"/><rect x="${vx}" y="0" width="36" height="${H}" fill="${s.c}"/><rect x="0" y="${H/2-18}" width="${W}" height="36" fill="${s.c}"/>`;
+    if(s.i) b+=`<rect x="${vx+9}" y="0" width="18" height="${H}" fill="${s.i}"/><rect x="0" y="${H/2-9}" width="${W}" height="18" fill="${s.i}"/>`;}
+  else if(s.t==="saltire"){b=`<rect width="${W}" height="${H}" fill="#005EB8"/><path d="M0 0L${W} ${H}M${W} 0L0 ${H}" stroke="#FFFFFF" stroke-width="36"/>`;}
+  else if(s.t==="swiss"){return `<svg class="flag" viewBox="0 0 200 200" role="img" aria-label="A flag"><rect width="200" height="200" fill="#DA291C"/><rect x="82" y="38" width="36" height="124" fill="#FFFFFF"/><rect x="38" y="82" width="124" height="36" fill="#FFFFFF"/></svg>`;}
+  else if(s.t==="greece"){const bl="#0D5EAF",sh=H/9;for(let i=0;i<9;i++)b+=`<rect x="0" y="${i*sh}" width="${W}" height="${sh+.5}" fill="${i%2?"#FFFFFF":bl}"/>`;
+    const cw=sh*5;b+=`<rect x="0" y="0" width="${cw}" height="${cw}" fill="${bl}"/><rect x="${cw/2-sh/2}" y="0" width="${sh}" height="${cw}" fill="#FFFFFF"/><rect x="0" y="${cw/2-sh/2}" width="${cw}" height="${sh}" fill="#FFFFFF"/>`;}
+  else if(s.t==="uk"){b=`<rect width="${W}" height="${H}" fill="#012169"/><path d="M0 0L${W} ${H}M${W} 0L0 ${H}" stroke="#FFFFFF" stroke-width="40"/><path d="M0 0L${W} ${H}M${W} 0L0 ${H}" stroke="#C8102E" stroke-width="13"/><rect x="${W/2-33}" y="0" width="66" height="${H}" fill="#FFFFFF"/><rect x="0" y="${H/2-33}" width="${W}" height="66" fill="#FFFFFF"/><rect x="${W/2-20}" y="0" width="40" height="${H}" fill="#C8102E"/><rect x="0" y="${H/2-20}" width="${W}" height="40" fill="#C8102E"/>`;}
+  return `<svg class="flag" viewBox="0 0 ${W} ${H}" role="img" aria-label="A flag">${b}</svg>`;
+}
+
+/* ---------- Helpers ---------- */
+const R=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const hash=s=>{let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return (h>>>0).toString(36);};
+const fmt=n=>n>=1000?n.toLocaleString("en-GB"):String(n);
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+
+/* Build pools */
+const POOLS={};
+for(const c in BANK){POOLS[c]=BANK[c].map(r=>({id:c+":"+hash(r[1]+"|"+r[2]+"|"+(r[7]||"")),cat:c,d:r[0],q:r[1],a:r[2],w:[r[3],r[4],r[5]],mc:r[6]===1,e:r[7]||null}));}
+const FLAGPOOL=FLAGS.map(f=>({id:"flag:"+f[0],cat:"geo",d:f[1],q:"Which country does this flag belong to?",a:f[0].replace(/^the /,"").replace(/^./,m=>m.toUpperCase()),
+  name:f[0],spec:f[2],flag:true}));
+FLAGPOOL.forEach(f=>{f.a=f.name.startsWith("the ")?"The "+f.name.slice(4):f.name;});
+const BANK_COUNT=Object.values(BANK).reduce((a,x)=>a+x.length,0)+FLAGS.length;
+
+let seen=new Set(store.get("pr_seen_v1",[]));
+const saveSeen=()=>store.set("pr_seen_v1",[...seen].slice(-4000));
+
+/* Pick the closest-difficulty unseen question from a pool */
+function pickFrom(pool,target,used){
+  let near=pool.filter(q=>Math.abs(q.d-target)<=1.1&&!used.has(q.id));
+  let fresh=near.filter(q=>!seen.has(q.id));
+  if(!fresh.length&&near.length){near.forEach(q=>seen.delete(q.id));saveSeen();fresh=near;}
+  if(!fresh.length) fresh=pool.filter(q=>!used.has(q.id));
+  if(!fresh.length) fresh=pool;
+  const best=fresh.filter(q=>Math.abs(q.d-target)<=0.6);
+  return pick(best.length?best:fresh);
+}
+
+/* ---------- Generated maths ---------- */
+function nearWrongs(a){
+  const step=a>=200?10:1;
+  const c=new Set([a+step,a-step,a+2*step,a-2*step,a+10,a-10,a+5,a-5,a+1,a-1].filter(x=>x!==a&&(a<0||x>=0)));
+  return shuffle([...c]).slice(0,3).map(fmt);
+}
+function genArith(l){
+  let q,a,say;
+  const t=Math.random();
+  if(l<=1){ if(t<.6){const x=R(1,10),y=R(1,10);q=`${x} + ${y}`;a=x+y;} else {const x=R(5,20),y=R(1,x);q=`${x} − ${y}`;a=x-y;} }
+  else if(l===2){
+    if(t<.3){const x=R(11,60),y=R(5,30);q=`${x} + ${y}`;a=x+y;}
+    else if(t<.55){const x=R(20,99),y=R(5,x-1);q=`${x} − ${y}`;a=x-y;}
+    else if(t<.85){const m=pick([2,5,10]),x=R(1,12);q=`${x} × ${m}`;a=x*m;}
+    else {const x=R(6,50);return mk(`What is double ${x}?`,2*x,l);}
+  } else if(l===3){
+    if(t<.4){const x=R(3,12),y=R(2,12);q=`${x} × ${y}`;a=x*y;}
+    else if(t<.7){const y=R(2,10),a2=R(2,12);q=`${y*a2} ÷ ${y}`;a=a2;}
+    else {const x=R(100,500),y=R(20,99);q=`${x} + ${y}`;a=x+y;}
+  } else if(l===4){
+    if(t<.25){const p=pick([10,25,50]);const base=p===10?R(2,40)*10:p===25?R(1,20)*4:R(2,60)*2;return mk(`What is ${p}% of ${base}?`,base*p/100,l);}
+    if(t<.45){const x=R(4,15);return mk(`What is ${x} squared?`,x*x,l,`What is ${x} squared?`);}
+    if(t<.65){const f=pick([[3,4],[2,3],[2,5],[3,5]]);const k=R(2,12)*f[1];return mk(`What is ${f[0]}/${f[1]} of ${k}?`,k*f[0]/f[1],l);}
+    if(t<.8){const x=R(1,9),y=R(x+2,x+15);q=`${x} − ${y}`;a=x-y;}
+    else {const x=R(6,12),y=R(6,12),z=R(5,30);q=`${x} × ${y} + ${z}`;a=x*y+z;}
+  } else {
+    if(t<.25){const p=pick([15,20,30,75]);const base=R(2,30)*20;return mk(`What is ${p}% of ${base}?`,base*p/100,l);}
+    if(t<.5){const x=R(12,25),y=R(11,19);q=`${x} × ${y}`;a=x*y;}
+    if(t>=.5&&t<.7){const x=R(11,25);return mk(`What is the square root of ${x*x}?`,x,l);}
+    if(t>=.7&&t<.85){const x=R(2,9),y=R(2,9),z=R(2,9);return mk(`What is ${x} + ${y} × ${z}?`,x+y*z,l,`Using the correct order of operations, what is ${x} plus ${y} times ${z}?`);}
+    if(t>=.85){const x=R(3,9),y=R(12,40);return mk(`What is ${x} × ${y} − ${x*2}?`,x*y-x*2,l);}
+  }
+  return mk(`What is ${q}?`,a,l);
+}
+function mk(q,a,l,say){return {id:"gen:"+q,cat:"mat",d:l,q,a:fmt(a),w:nearWrongs(a),say};}
+
+function timePhrase(h,m){
+  const hh=x=>((x-1)%12+12)%12+1;
+  h=hh(h);
+  if(m===0) return `${h} o'clock`;
+  if(m===30) return `Half past ${h}`;
+  if(m===15) return `Quarter past ${h}`;
+  if(m===45) return `Quarter to ${hh(h+1)}`;
+  if(m<30) return `${m} past ${h}`;
+  return `${60-m} to ${hh(h+1)}`;
+}
+function clockSVG(h,m){
+  let s=`<svg viewBox="0 0 200 200" role="img" aria-label="A clock face"><circle class="clock-face" cx="100" cy="100" r="92"/>`;
+  for(let i=0;i<60;i++){const a=i*6*Math.PI/180,r1=i%5?84:80,r2=88;s+=`<line class="clock-tick" x1="${100+r1*Math.sin(a)}" y1="${100-r1*Math.cos(a)}" x2="${100+r2*Math.sin(a)}" y2="${100-r2*Math.cos(a)}"/>`;}
+  for(let n=1;n<=12;n++){const a=n*30*Math.PI/180;s+=`<text class="clock-num" x="${100+67*Math.sin(a)}" y="${100-67*Math.cos(a)+7}" text-anchor="middle">${n}</text>`;}
+  const ha=((h%12)+m/60)*30*Math.PI/180, ma=m*6*Math.PI/180;
+  s+=`<line class="clock-h" x1="100" y1="100" x2="${100+44*Math.sin(ha)}" y2="${100-44*Math.cos(ha)}"/>`;
+  s+=`<line class="clock-m" x1="100" y1="100" x2="${100+70*Math.sin(ma)}" y2="${100-70*Math.cos(ma)}"/><circle class="clock-c" cx="100" cy="100" r="6"/></svg>`;
+  return s;
+}
+function genClock(l){
+  const h=R(1,12);
+  let m = l<=1?0 : l===2?pick([0,30,30]) : l===3?pick([15,30,45]) : pick([5,10,20,25,35,40,50,55]);
+  if(l>=5) m=R(0,11)*5;
+  let ah=h,am=m,q="What time does this clock show?",say;
+  if(l>=5){const add=pick([20,25,35,40,45,50]);const tot=h*60+m+add;ah=Math.floor(tot/60);am=tot%60;q=`What time will it be ${add} minutes after the time on this clock?`;}
+  const ans=timePhrase(ah,am);
+  const cands=[[ah+1,am],[ah-1,am],[ah,(am+30)%60],[ah,(am+15)%60],[ah,(am+45)%60],[ah+2,am]];
+  if(am%5===0){cands.unshift([am===0?12:am/5,((ah%12)*5)%60]);}
+  const w=[...new Set(shuffle(cands).map(c=>timePhrase(c[0],c[1])))].filter(x=>x!==ans).slice(0,3);
+  return {id:"clock:"+h+":"+m+":"+l,cat:"mat",d:l,q,a:ans,w,svg:clockSVG(h,m)};
+}
+const SHAPES=[[3,"Triangle",1],[4,"Square",1],[0,"Circle",1],[5,"Pentagon",2],[6,"Hexagon",2],[8,"Octagon",3],[7,"Heptagon",4],[10,"Decagon",5],[9,"Nonagon",5]];
+function shapeSVG(n){
+  if(!n) return `<svg viewBox="0 0 200 200" role="img" aria-label="A shape"><circle class="shape" cx="100" cy="100" r="80"/></svg>`;
+  const pts=[];for(let i=0;i<n;i++){const a=(i/n)*2*Math.PI+Math.PI/n+Math.PI/2;pts.push(`${100+82*Math.cos(a)},${104+82*Math.sin(a)}`);}
+  return `<svg viewBox="0 0 200 200" role="img" aria-label="A shape"><polygon class="shape" points="${pts.join(" ")}"/></svg>`;
+}
+function genShape(l){
+  const ok=SHAPES.filter(s=>s[2]<=l&&s[2]>=l-2);
+  const s=pick(ok.length?ok:SHAPES);
+  const askSides=s[0]>0&&l>=2&&Math.random()<.5;
+  if(askSides){const n=s[0];return {id:"shape:s"+n,cat:"mat",d:l,q:"How many sides does this shape have?",a:String(n),w:shuffle([n-1,n+1,n+2].map(String)),svg:shapeSVG(n)};}
+  const others=shuffle(SHAPES.filter(x=>x!==s&&Math.abs(x[2]-s[2])<=2)).slice(0,3).map(x=>x[1]);
+  return {id:"shape:n"+s[1],cat:"mat",d:l,q:"What is the name of this shape?",a:s[1],w:others,svg:shapeSVG(s[0]),mc:l<=2};
+}
+function genFlag(target,used){
+  const f=pickFrom(FLAGPOOL,target,used);
+  const others=shuffle(FLAGPOOL.filter(x=>x!==f&&Math.abs(x.d-f.d)<=1)).slice(0,3).map(x=>x.a);
+  return {...f,w:others,svg:flagSVG(f.spec)};
+}
+
+/* ---------- Speech ---------- */
+const Speech={ok:"speechSynthesis" in window,voice:null,
+  init(){ if(!this.ok) return; const choose=()=>{const v=speechSynthesis.getVoices();
+      this.voice=v.find(x=>/en[-_]GB/i.test(x.lang)&&/(sonia|libby|serena|kate|martha|female|google uk english female)/i.test(x.name))
+        ||v.find(x=>/en[-_]GB/i.test(x.lang))||v.find(x=>/^en/i.test(x.lang))||null;};
+    choose(); speechSynthesis.onvoiceschanged=choose; },
+  say(parts,delay=80){ if(!this.ok||!setup.voice) return; speechSynthesis.cancel();
+    const list=(Array.isArray(parts)?parts:[parts]).filter(Boolean).map(speakable);
+    clearTimeout(this.tm);
+    this.tm=setTimeout(()=>{list.forEach(p=>{const u=new SpeechSynthesisUtterance(p);if(this.voice)u.voice=this.voice;u.lang="en-GB";u.rate=.95;speechSynthesis.speak(u);});},delay); },
+  stop(){ if(this.ok){clearTimeout(this.tm);speechSynthesis.cancel();} }
+};
+/* Dates like "25th December" (or "25 December") are spoken as "the twenty-fifth of December". Speech engines
+   read day numbers inconsistently ("24th December" then "25 December"), so the words are spelled out. */
+const DATE_RE=/\b([1-9]|[12]\d|3[01])(?:st|nd|rd|th)? (January|February|March|April|May|June|July|August|September|October|November|December)\b/g;
+function ordinalWord(n){
+  const w=["","first","second","third","fourth","fifth","sixth","seventh","eighth","ninth","tenth","eleventh","twelfth","thirteenth",
+    "fourteenth","fifteenth","sixteenth","seventeenth","eighteenth","nineteenth","twentieth"];
+  if(n<=20) return w[n];
+  if(n===30) return "thirtieth";
+  return (n<30?"twenty-":"thirty-")+w[n%10];
+}
+function speakable(t){
+  const fr={"1/2":"a half","1/4":"a quarter","3/4":"three quarters","1/3":"a third","2/3":"two thirds","2/5":"two fifths","3/5":"three fifths","1/8":"an eighth","5/8":"five eighths","1/25":"one twenty-fifth"};
+  return String(t)
+    .replace(DATE_RE,(m,d,mon)=>`the ${ordinalWord(+d)} of ${mon}`)
+    .replace(/\b(\d)\/(\d+)\b/g,m=>fr[m]||m)
+    .replace(/×/g," times ").replace(/÷/g," divided by ").replace(/(\d)\s*−\s*(\d)/g,"$1 minus $2").replace(/−/g," minus ")
+    .replace(/(\d+)p\b/g,"$1 pence").replace(/\bH2O\b/g,"H 2 O").replace(/\bCO2\b/g,"C O 2").replace(/\bO2\b/g,"O 2")
+    .replace(/&/g," and ").replace(/221B/g,"2 2 1 B").replace(/4\/4/g,"four four");
+}
+
+/* ---------- Sound effects (synthesised in the browser: free, no files, works offline) ---------- */
+const Sfx={ctx:null,
+  ensure(){ if(!setup.sound) return null;
+    try{ if(!this.ctx){const C=window.AudioContext||window.webkitAudioContext; if(!C) return null; this.ctx=new C();}
+      if(this.ctx.state==="suspended") this.ctx.resume(); return this.ctx; }catch(e){ return null; } },
+  tone(f,start,dur,type,vol,f2){ const c=this.ensure(); if(!c) return;
+    const t=c.currentTime+start,o=c.createOscillator(),g=c.createGain();
+    o.type=type||"triangle"; o.frequency.setValueAtTime(f,t); if(f2) o.frequency.exponentialRampToValueAtTime(f2,t+dur);
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol||.18,t+.02); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(g); g.connect(c.destination); o.start(t); o.stop(t+dur+.05); },
+  right(){ [[784,0],[988,.09],[1319,.18]].forEach(([f,s])=>this.tone(f,s,.3,"triangle",.2)); },
+  wrong(){ this.tone(330,0,.5,"sine",.25,110); },
+  streak(){ [1047,1319,1568,2093].forEach((f,i)=>this.tone(f,.35+i*.07,.22,"sine",.12)); },
+  win(){ [[523,0],[659,.15],[784,.3],[1047,.45],[784,.62],[1047,.75]].forEach(([f,s],i)=>this.tone(f,s,i===5?.7:.2,"square",.07)); },
+  pop(){ this.tone(520,0,.08,"sine",.1,880); }
+};
+
+/* ---------- Confetti, shakes and pop-up messages ---------- */
+const Fx={canvas:null,parts:[],running:false,
+  reduced(){ return matchMedia("(prefers-reduced-motion: reduce)").matches; },
+  burst(n){ if(this.reduced()) return;
+    if(!this.canvas){const c=document.createElement("canvas");c.className="confetti";c.setAttribute("aria-hidden","true");document.body.appendChild(c);this.canvas=c;}
+    const c=this.canvas,dpr=window.devicePixelRatio||1; c.width=innerWidth*dpr; c.height=innerHeight*dpr;
+    const cols=["#FF9EC2","#FFD84D","#C9AEFF","#8EE6B4","#57DCC9","#FFB862","#8DB8FF","#C2185B"];
+    for(let i=0;i<(n||70);i++) this.parts.push({x:innerWidth/2+(Math.random()-.5)*160,y:innerHeight*.3,vx:(Math.random()-.5)*10,vy:-Math.random()*10-4,
+      s:Math.random()*7+6,r:Math.random()*6,vr:(Math.random()-.5)*.3,c:pick(cols),life:0,round:Math.random()<.3});
+    if(!this.running){this.running=true;requestAnimationFrame(()=>this.step());} },
+  step(){ const c=this.canvas,x=c.getContext("2d"),dpr=window.devicePixelRatio||1;
+    x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,innerWidth,innerHeight);
+    this.parts=this.parts.filter(p=>p.y<innerHeight+30&&p.life<260);
+    for(const p of this.parts){ p.life++; p.vy+=.25; p.vx*=.99; p.x+=p.vx; p.y+=p.vy; p.r+=p.vr;
+      x.save(); x.translate(p.x,p.y); x.rotate(p.r); x.fillStyle=p.c;
+      if(p.round){x.beginPath();x.arc(0,0,p.s/2.4,0,Math.PI*2);x.fill();} else x.fillRect(-p.s/2,-p.s/3,p.s,p.s*.66);
+      x.restore(); }
+    if(this.parts.length) requestAnimationFrame(()=>this.step()); else {this.running=false;x.clearRect(0,0,innerWidth,innerHeight);} },
+  shake(){ if(this.reduced()) return; const el=document.querySelector(".card"); if(!el) return;
+    el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); }
+};
+function toast(text){
+  let t=document.querySelector(".toast");
+  if(!t){t=document.createElement("div");t.className="toast";t.setAttribute("role","status");document.body.appendChild(t);}
+  t.textContent=text; t.classList.remove("show"); void t.offsetWidth; t.classList.add("show");
+  clearTimeout(toast.tm); toast.tm=setTimeout(()=>t.classList.remove("show"),1900);
+}
+
+/* ---------- State ---------- */
+const AVATARS=[["🦊","fox"],["🐻","bear"],["🐼","panda"],["🦄","unicorn"],["🐸","frog"],["🐯","tiger"],["🐵","monkey"],["🐰","rabbit"],
+  ["🐨","koala"],["🦁","lion"],["🐙","octopus"],["🐧","penguin"],["🐶","dog"],["🐱","cat"],["🦖","dinosaur"],["🐢","turtle"],["🦉","owl"],["🐝","bee"]];
+const avName=a=>(AVATARS.find(x=>x[0]===a)||[a,"animal"])[1];
+const DEFAULT_SETUP={players:[{name:"",age:"",av:"🦊"},{name:"",age:"",av:"🐻"}],cats:Object.keys(CATS),per:5,voice:true,sound:true};
+let setup=Object.assign({},DEFAULT_SETUP,store.get("pr_setup_v1",{}));
+function freeAvatar(except){const used=new Set(setup.players.filter((p,i)=>i!==except).map(p=>p.av));return (AVATARS.find(a=>!used.has(a[0]))||AVATARS[0])[0];}
+/* Fills gaps in settings saved by older versions (e.g. players with no animal yet). Runs on load and after a live update. */
+function normalizeSetup(){
+  if(!Array.isArray(setup.players)||!setup.players.length) setup.players=DEFAULT_SETUP.players.map(p=>({...p}));
+  setup.players.forEach((p,i)=>{ if(!AVATARS.some(a=>a[0]===p.av)) p.av=freeAvatar(i); });
+  if(typeof setup.sound!=="boolean") setup.sound=true;
+  if(typeof setup.voice!=="boolean") setup.voice=true;
+  if(!Array.isArray(setup.cats)) setup.cats=Object.keys(CATS);
+  if(state&&Array.isArray(state.players)) state.players.forEach((p,i)=>{ if(!AVATARS.some(a=>a[0]===p.av)){
+    const m=setup.players.find(s=>s.name.trim()===p.name); p.av=m?m.av:AVATARS[i%AVATARS.length][0]; } });
+}
+let state=null;      // the running game
+let ui={error:"",quitArm:false,pickFor:null};
+const saveSetup=()=>store.set("pr_setup_v1",setup);
+normalizeSetup(); saveSetup();
+
+function startRating(age){
+  age=parseInt(age,10); if(!age) return 3;
+  if(age<=6) return 1; if(age<=8) return 1.4; if(age<=10) return 1.9; if(age<=12) return 2.4;
+  if(age<=15) return 2.9; if(age<=17) return 3.3; return 3.5;
+}
+const cur=()=>state.players[state.turn%state.players.length];
+const posName=n=>n+(/s$/i.test(n)?"'":"'s");
+
+function startGame(){
+  const players=setup.players.map(p=>({name:p.name.trim(),age:p.age,av:p.av})).filter(p=>p.name);
+  if(!players.length){ui.error="Add at least one player's name to start.";render();return;}
+  if(!setup.cats.length){ui.error="Pick at least one topic.";render();return;}
+  ui.error=""; ui.pickFor=null;
+  state={players:players.map(p=>({...p,score:0,r:startRating(p.age),streak:0,best:0,answered:0,lastCat:null})),
+    total:players.length*setup.per,turn:0,used:[],q:null,mode:null,opts:[],phase:"ask",picked:null,screen:"play"};
+  try{navigator.wakeLock&&navigator.wakeLock.request("screen").catch(()=>{});}catch(e){}
+  Sfx.pop();
+  nextQuestion(true);
+}
+
+function nextQuestion(first,prefix,delay){
+  const p=cur(), used=new Set(state.used);
+  const cats=setup.cats.length>1?setup.cats.filter(c=>c!==p.lastCat):setup.cats;
+  const cat=pick(cats); p.lastCat=cat;
+  const target=clamp(p.r+(Math.random()-.5)*.9,1,5), lvl=Math.round(target);
+  let q=null;
+  if(cat==="mat"){const x=Math.random(); if(x<.42) q=genArith(lvl); else if(x<.62) q=genClock(lvl); else if(x<.72) q=genShape(lvl);}
+  if(cat==="geo"&&Math.random()<.28) q=genFlag(target,used);
+  if(!q) q=pickFrom(POOLS[cat],target,used);
+  state.used.push(q.id); seen.add(q.id); saveSeen();
+  const mcChance=p.r<2.5?.6:.45;
+  state.q={...q}; state.mode=(q.mc||Math.random()<mcChance)?"mc":"open";
+  state.opts=shuffle([q.a,...q.w]); state.phase="ask"; state.picked=null; state.feedback=null;
+  render(); window.scrollTo(0,0); readQuestion(prefix,delay);
+}
+
+/* ---------- The host's lines ----------
+   Each moment has several ways of saying it. {name}, {a}, {cat}, {n} and {pts} are filled in.
+   The host never uses the same line twice in a row for the same moment. */
+const LINES={
+  turn:["{name}, you're up next.","Over to you, {name}!","Your turn, {name}!","Here's one for you, {name}.","Next up, it's {name}!",
+    "Ready, {name}? Here we go.","{name}, this one's all yours.","Right then, {name}, let's see what you know.","Okay {name}, put your thinking cap on."],
+  cat:["{cat}.","This one's {cat}.","Time for some {cat}.","It's a {cat} question.","Let's have some {cat}."],
+  look:["Have a look at the picture.","Take a good look at this.","Look closely."],
+  options:["Is it {list}?","Your choices are {list}.","Is it {list}? Have a think."],
+  right:["Correct! Well done, {name}.","Yes! Brilliant, {name}!","That's right! Nice one.","Spot on, {name}!","Smashed it!","Ooh, very good!",
+    "Top marks, {name}!","That's the one!","Correct! Clever clogs.","Nailed it, {name}!"],
+  wrong:["Not quite. The answer is {a}.","Oh, so close! It was {a}.","Unlucky, {name}. The answer is {a}.","Ooh, not this time. It's {a}.",
+    "Good try! The right answer is {a}.","Oh no! It was {a}."],
+  reveal:["The answer is {a}.","And the answer is... {a}!","It's {a}!","Drum roll please... {a}!","The answer we were looking for is {a}."],
+  judgeRight:["Point to {name}!","Nice one, {name}!","Well done, {name}!","A point for {name}!","Great answer, {name}!"],
+  judgeWrong:["Never mind, {name}.","Unlucky, {name}.","Better luck next time, {name}.","Oh well, {name}. The next one's yours.","So close, {name}."],
+  streak:["That's {n} in a row!","{n} in a row! You're on fire!","Wow, {n} in a row!","{n} in a row. Unstoppable!"],
+  skip:["Let's try a different one.","Okay, here's another one.","No problem. New question!"],
+  half:["We're halfway there!","Halfway through the quiz!"],
+  last:["Last question!","Here comes the very last question!","This is the final question!"],
+  end:["That's the end of the game!","And that was the last question!","Pencils down, that's the game!"],
+  win:["And the winner is {name}, with {pts}! Well played, everyone.","{name} wins with {pts}! What a game!","Congratulations, {name}! You win with {pts}.","Hooray for {name}, our champion, with {pts}!"],
+  draw:["It's a draw between {name}, with {pts} each!","We have a tie! {name} share the crown with {pts} each!"]
+};
+const lastLine={};
+function line(key,vars){
+  const opts=LINES[key], prev=lastLine[key];
+  let pickd=pick(opts); if(opts.length>1) while(pickd===prev) pickd=pick(opts);
+  lastLine[key]=pickd;
+  return pickd.replace(/\{(\w+)\}/g,(m,k)=>vars&&vars[k]!=null?vars[k]:"");
+}
+const orList=o=>`${o.slice(0,-1).join(", ")}, or ${o[o.length-1]}`;
+
+function readQuestion(prefix,delay){
+  const p=cur(),q=state.q,parts=[];
+  if(prefix) parts.push(prefix);
+  if(state.turn===state.total-1&&state.total>2) parts.push(line("last"));
+  else if(state.total>=8&&state.turn===state.total/2) parts.push(line("half"));
+  parts.push(line("turn",{name:p.name}));
+  parts.push(line("cat",{cat:CATS[q.cat].name}));
+  if(q.e||q.svg) parts.push(line("look"));
+  parts.push(q.say||q.q);
+  if(state.mode==="mc") parts.push(line("options",{list:orList(state.opts)}));
+  Speech.say(parts,delay);
+}
+
+/* Records the answer and plays the matching sound and effects. Returns the streak length when it's worth a mention. */
+function score(correct){
+  const p=cur(); p.answered++;
+  if(correct){
+    p.score++; p.streak++; p.best=Math.max(p.best,p.streak); p.r=clamp(p.r+.4,1,5);
+    Sfx.right(); Fx.burst(p.streak>=3?110:60);
+    if(p.streak>=3){ Sfx.streak(); toast(`${p.av} ${p.streak} in a row! 🔥`); return p.streak; }
+  } else { p.streak=0; p.r=clamp(p.r-.5,1,5); Sfx.wrong(); }
+  return 0;
+}
+function advance(prefix,delay){
+  state.turn++;
+  if(state.turn>=state.total){endGame(prefix);return;}
+  nextQuestion(false,prefix,delay);
+}
+function endGame(prefix){
+  state.screen="end"; render(); window.scrollTo(0,0);
+  const ps=state.players.slice().sort((a,b)=>b.score-a.score), top=ps[0].score, winners=ps.filter(p=>p.score===top);
+  const pts=n=>n===1?"1 point":`${n} points`;
+  let verdict;
+  if(state.players.length===1) verdict=`You scored ${pts(top)} out of ${state.total}. ${top>0?"Nice work, "+ps[0].name+"!":"Have another go!"}`;
+  else if(winners.length===1) verdict=line("win",{name:winners[0].name,pts:pts(top)});
+  else verdict=line("draw",{name:winners.map(w=>w.name).join(" and "),pts:pts(top)});
+  Sfx.win(); Fx.burst(180); setTimeout(()=>Fx.burst(120),700);
+  Speech.say([prefix,line("end"),verdict],1100);
+}
+
+/* ---------- Rendering ---------- */
+const $app=document.getElementById("app");
+const ICON_SPEAK=`<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>`;
+const catVars=k=>`--c:var(--${k});--ci:var(--${k}-ink)`;
+
+function render(){
+  if(!state||state.screen==="setup") return renderSetup();
+  if(state.screen==="play") return renderPlay();
+  if(state.screen==="end") return renderEnd();
+}
+
+function minutesNote(){const n=setup.players.filter(p=>p.name.trim()).length||1;
+  return `About ${Math.max(2,Math.round(n*setup.per*40/60))} minutes with ${n} player${n>1?"s":""}.`;}
+
+function renderSetup(){
+  const taken=i=>new Set(setup.players.filter((p,j)=>j!==i).map(p=>p.av));
+  $app.innerHTML=`
+  <header class="hero"><div class="sweets" aria-hidden="true">🍭🧁🍬</div><h1><span class="w1">Family</span> <span class="w2">Quiz</span> <span class="w3">Game</span></h1>
+    <p>The after-dinner quiz where every question is pitched at whoever's holding the phone.</p></header>
+  <section class="panel" aria-labelledby="h-players">
+    <h2 id="h-players">Players</h2>
+    <div class="phead label"><span></span><span>Name</span><span>Age</span><span></span></div>
+    ${setup.players.map((p,i)=>`<div class="prow">
+      <button class="av" data-a="pickav" data-i="${i}" aria-expanded="${ui.pickFor===i}" aria-label="Choose an animal for ${esc(p.name||"player "+(i+1))}, currently ${avName(p.av)}">${p.av}</button>
+      <input class="field" id="name-${i}" data-i="${i}" data-k="name" value="${esc(p.name)}" placeholder="Name" autocomplete="off" maxlength="16" aria-label="Player ${i+1} name">
+      <input class="field" id="age-${i}" data-i="${i}" data-k="age" value="${esc(p.age??"")}" placeholder="Age" inputmode="numeric" maxlength="3" aria-label="Player ${i+1} age">
+      <button class="rm" data-a="rm" data-i="${i}" aria-label="Remove ${esc(p.name||"player")}" ${setup.players.length<2?"disabled":""}>×</button></div>
+      ${ui.pickFor===i?`<div class="avgrid" role="group" aria-label="Animals">${AVATARS.map(([a,n])=>`<button data-a="setav" data-i="${i}" data-v="${a}" aria-label="${n}" aria-pressed="${p.av===a}" ${taken(i).has(a)?"disabled":""}>${a}</button>`).join("")}</div>`:""}`).join("")}
+    ${setup.players.length<8?`<button class="btn btn-ghost" data-a="add">+ Add player</button>`:""}
+    <p class="note">Tap the animal to change it. Age sets the starting level, then questions get harder after right answers and easier after wrong ones.</p>
+  </section>
+  <section class="panel" aria-labelledby="h-topics">
+    <h2 id="h-topics">Topics</h2>
+    <div class="chips">${Object.entries(CATS).map(([k,c])=>`<button class="chip" data-a="cat" data-c="${k}" style="${catVars(k)}" aria-pressed="${setup.cats.includes(k)}"><span aria-hidden="true">${c.icon}</span>${c.name}</button>`).join("")}</div>
+  </section>
+  <section class="panel" aria-labelledby="h-len">
+    <h2 id="h-len">Questions each</h2>
+    <div class="seg" role="group" aria-labelledby="h-len">${[3,5,8,10,12].map(v=>`<button data-a="per" data-v="${v}" aria-pressed="${setup.per===v}">${v}</button>`).join("")}</div>
+    <p class="note" id="mins">${minutesNote()}</p>
+    <div class="toggle"><div><strong>Read questions aloud</strong>${Speech.ok?"":`<p class="note">This browser can't read aloud.</p>`}</div>
+      <button class="switch" role="switch" data-a="voice" aria-checked="${setup.voice}" aria-label="Read questions aloud"></button></div>
+    <div class="toggle"><strong>Sound effects</strong>
+      <button class="switch" role="switch" data-a="sound" aria-checked="${setup.sound}" aria-label="Sound effects"></button></div>
+  </section>
+  ${ui.error?`<p class="err" role="alert">${esc(ui.error)}</p>`:""}
+  <button class="btn btn-main" data-a="start">Start the quiz 🎉</button>
+  <p class="note" style="text-align:center">${BANK_COUNT} questions, plus endless sums, clocks and shapes. Questions you've had are kept back until you've seen the rest.
+    <br><button class="linkbtn" data-a="resetseen">Forget which questions we've had</button></p>`;
+}
+
+function scoresHTML(){
+  return `<div class="scores">${state.players.map((p,i)=>`<span class="sc ${state.screen==="play"&&i===state.turn%state.players.length?"on":""}">
+    <span class="a" aria-hidden="true">${p.av}</span>${esc(p.name)} <b>${p.score}</b>${p.streak>=3?` <span aria-label="${p.streak} in a row">🔥</span>`:""}</span>`).join("")}</div>`;
+}
+
+function renderPlay(){
+  const p=cur(),q=state.q,cat=q.cat;
+  let pic="";
+  if(q.svg) pic=`<div class="pic">${q.svg}</div>`;
+  else if(q.e) pic=`<div class="emoji" aria-hidden="true">${q.e}</div>`;
+  let body="";
+  if(state.mode==="mc"){
+    body=state.opts.map((o,i)=>{
+      let cls="",mark="";
+      if(state.phase==="done"){ if(o===q.a){cls="ok";mark="✓";} else if(i===state.picked){cls="no";mark="✗";} else cls="dim"; }
+      return `<button class="opt ${cls}" data-a="opt" data-i="${i}" ${state.phase==="done"?"disabled":""}><span class="k">${"ABCD"[i]}</span><span>${esc(o)}</span><span class="m" aria-hidden="true">${mark}</span></button>`;}).join("");
+    if(state.phase==="done"){
+      const right=state.opts[state.picked]===q.a;
+      body+=`<div class="result ${right?"ok":"no"}" role="status">${esc(state.feedback||(right?"Correct!":`It's ${q.a}.`))}${right?" 🎉":""}</div>
+        <button class="btn btn-main" data-a="next">${state.turn+1>=state.total?"See the scores 🏆":`Next: ${state.players[(state.turn+1)%state.players.length].av} ${esc(state.players[(state.turn+1)%state.players.length].name)}`}</button>`;
+    }
+  } else {
+    if(state.phase==="ask"){
+      body=`<p class="hint">Say your answer out loud, then show the answer.</p><button class="btn btn-main" data-a="reveal">Show answer 👀</button>`;
+    } else {
+      body=`<div class="reveal"><span class="label">Answer</span><span class="ans">${esc(q.a)}</span></div>
+        <p class="hint">Everyone decides: did ${esc(p.name)} get it?</p>
+        <div class="judge"><button class="btn btn-ok" data-a="judge" data-v="1">✓ Got it</button><button class="btn btn-no" data-a="judge" data-v="0">✗ Missed it</button></div>`;
+    }
+  }
+  $app.innerHTML=`
+  <header class="bar">${scoresHTML()}<button class="btn btn-ghost btn-small" data-a="quit">${ui.quitArm?"Tap again to end":"End game"}</button></header>
+  <main class="card" style="${catVars(cat)}">
+    <div class="meta"><span class="tag"><span aria-hidden="true">${CATS[cat].icon}</span> ${CATS[cat].name}</span><span class="count">Question ${state.turn+1} of ${state.total}</span></div>
+    <h2 class="turn"><span class="a" aria-hidden="true">${p.av}</span>${esc(posName(p.name))} turn!</h2>
+    ${pic}
+    <p class="q">${esc(q.q)}</p>
+  </main>
+  <section class="answers" aria-label="Answers">${body}</section>
+  <div class="tools">
+    ${Speech.ok&&setup.voice?`<button class="btn btn-ghost btn-small" data-a="say">${ICON_SPEAK} Read again</button>`:"<span></span>"}
+    ${state.phase!=="done"?`<button class="btn btn-ghost btn-small" data-a="skip">Skip this question</button>`:""}
+  </div>`;
+}
+
+function renderEnd(){
+  const ps=state.players.slice().sort((a,b)=>b.score-a.score);
+  const top=ps[0].score, winners=ps.filter(p=>p.score===top);
+  const head=state.players.length===1?`Well played, ${esc(ps[0].name)}!`:winners.length===1?`${winners[0].av} ${esc(winners[0].name)} wins!`:"It's a draw!";
+  let place=0,last=null;
+  $app.innerHTML=`
+  <div class="trophy" aria-hidden="true">🏆</div>
+  <h1 class="endh">${head}</h1>
+  <p class="note" style="text-align:center">${state.total} questions played.</p>
+  <div class="podium">${ps.map((p,i)=>{ if(p.score!==last){place=i+1;last=p.score;}
+    return `<div class="rank ${place===1?"first":""}"><span class="pos">${place}</span><span class="a" aria-hidden="true">${p.av}</span>
+      <div><div class="nm">${esc(p.name)}</div><div class="st">${p.score} of ${p.answered} right · best run ${p.best}</div></div>
+      <span class="pts" aria-label="${p.score} points">${p.score}</span></div>`;}).join("")}</div>
+  <div class="rowbtns"><button class="btn btn-main" data-a="again">Play again</button><button class="btn btn-ghost" data-a="setup">Change players</button></div>`;
+}
+
+/* ---------- Events ---------- */
+$app.addEventListener("input",e=>{
+  const t=e.target; if(!t.dataset.k) return;
+  const i=+t.dataset.i;
+  if(t.dataset.k==="age"){t.value=t.value.replace(/\D/g,"");setup.players[i].age=t.value?+t.value:"";}
+  else setup.players[i].name=t.value;
+  saveSetup();
+  const m=document.getElementById("mins"); if(m) m.textContent=minutesNote();
+});
+let quitTimer=null;
+$app.addEventListener("click",e=>{
+  const b=e.target.closest("[data-a]"); if(!b) return;
+  const a=b.dataset.a;
+  if(a!=="quit"&&ui.quitArm){ui.quitArm=false;}
+  switch(a){
+    case "add": setup.players.push({name:"",age:"",av:freeAvatar(-1)}); saveSetup(); render(); document.getElementById(`name-${setup.players.length-1}`)?.focus(); break;
+    case "rm": setup.players.splice(+b.dataset.i,1); ui.pickFor=null; saveSetup(); render(); break;
+    case "pickav": {const i=+b.dataset.i; ui.pickFor=ui.pickFor===i?null:i; render(); break;}
+    case "setav": {const i=+b.dataset.i; setup.players[i].av=b.dataset.v; ui.pickFor=null; saveSetup(); Sfx.pop(); render();
+      document.querySelector(`.av[data-i="${i}"]`)?.focus(); break;}
+    case "cat": {const c=b.dataset.c; setup.cats=setup.cats.includes(c)?setup.cats.filter(x=>x!==c):[...setup.cats,c]; saveSetup(); render(); break;}
+    case "per": setup.per=+b.dataset.v; saveSetup(); render(); break;
+    case "voice": setup.voice=!setup.voice; saveSetup(); if(!setup.voice) Speech.stop(); render(); break;
+    case "sound": setup.sound=!setup.sound; saveSetup(); Sfx.pop(); render(); break;
+    case "resetseen": seen=new Set(); saveSeen(); b.textContent="Done. Every question is back in the pot."; break;
+    case "start": case "again": startGame(); break;
+    case "setup": Speech.stop(); state=null; render(); window.scrollTo(0,0); break;
+    case "say": readQuestion(); break;
+    case "skip": nextQuestion(false,line("skip")); break;
+    case "opt": {
+      if(state.phase==="done") return;
+      state.picked=+b.dataset.i; const right=state.opts[state.picked]===state.q.a;
+      state.phase="done"; const streak=score(right), vars={name:cur().name,a:state.q.a};
+      state.feedback=line(right?"right":"wrong",vars); render(); if(!right) Fx.shake();
+      Speech.say([state.feedback,streak?line("streak",{n:streak}):null],650);
+      break;}
+    case "next": advance(); break;
+    case "reveal": state.phase="revealed"; Sfx.pop(); render(); Speech.say([line("reveal",{a:state.q.a})]); break;
+    case "judge": {const ok=b.dataset.v==="1"; const name=cur().name; const streak=score(ok);
+      const said=[line(ok?"judgeRight":"judgeWrong",{name}),streak?line("streak",{n:streak}):""].filter(Boolean).join(" ");
+      advance(said,700); break;}
+    case "quit":
+      if(!ui.quitArm){ui.quitArm=true;render();clearTimeout(quitTimer);quitTimer=setTimeout(()=>{if(ui.quitArm){ui.quitArm=false;if(state&&state.screen==="play")render();}},3000);}
+      else {ui.quitArm=false;Speech.stop();if(state.turn>0){state.total=state.turn;endGame();}else{state=null;render();}}
+      break;
+  }
+});
+
+/* ---------- Boot ---------- */
+Speech.init();
+window.claude?.hot?.snapshot?.(()=>({state,setup}));
+function boot(data){ if(data&&data.setup) setup=data.setup; if(data&&data.state) state=data.state; normalizeSetup(); saveSetup(); render(); }
+window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});
+</script>
