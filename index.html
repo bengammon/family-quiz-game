@@ -145,6 +145,19 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .rank .pts{font-family:var(--display);font-weight:700;font-size:1.9rem;font-variant-numeric:tabular-nums}
 .rowbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
+/* Round screen */
+.roundcard{background:var(--pop);color:var(--ink);border-radius:32px;padding:26px 20px 24px;text-align:center;display:flex;flex-direction:column;gap:4px;align-items:center;animation:pop .4s ease-out}
+.roundcard .rk{font-family:var(--display);font-weight:700;font-size:1.15rem;letter-spacing:.1em;text-transform:uppercase}
+.roundcard .rn{font-family:var(--display);font-weight:700;font-size:clamp(5rem, 28vw, 7.5rem);line-height:.95}
+.roundcard .of{font-family:var(--display);font-weight:600;font-size:1.3rem}
+.roundcard .upnext{margin-top:12px;background:var(--card);border-radius:999px;padding:8px 18px;font-family:var(--display);font-weight:600;font-size:1.15rem;display:inline-flex;align-items:center;gap:8px}
+.roundcard .upnext .a{font-size:1.6rem;line-height:1}
+.dots{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.dots span{width:14px;height:14px;border-radius:50%;border:2.5px solid var(--ink);background:transparent}
+.dots span.done{background:var(--ink)}
+.dots span.now{background:var(--card)}
+.halfh{text-align:center;font-size:1.5rem;color:var(--t2)}
+
 /* Pictures drawn in the page */
 .clock-face{fill:#FFFFFF;stroke:var(--hand);stroke-width:6}
 .clock-num{fill:var(--hand);font-family:var(--display);font-weight:700;font-size:19px}
@@ -864,7 +877,8 @@ const Sfx={ctx:null,
   wrong(){ this.tone(330,0,.5,"sine",.25,110); },
   streak(){ [1047,1319,1568,2093].forEach((f,i)=>this.tone(f,.35+i*.07,.22,"sine",.12)); },
   win(){ [[523,0],[659,.15],[784,.3],[1047,.45],[784,.62],[1047,.75]].forEach(([f,s],i)=>this.tone(f,s,i===5?.7:.2,"square",.07)); },
-  pop(){ this.tone(520,0,.08,"sine",.1,880); }
+  pop(){ this.tone(520,0,.08,"sine",.1,880); },
+  round(){ [523,659,784,1047].forEach((f,i)=>this.tone(f,i*.11,.22,"triangle",.16)); }
 };
 
 /* ---------- Confetti, shakes and pop-up messages ---------- */
@@ -933,8 +947,8 @@ function startGame(){
   state={players:players.map(p=>({...p,score:0,r:startRating(p.age),streak:0,best:0,answered:0,lastCat:null})),
     total:players.length*setup.per,turn:0,used:[],q:null,mode:null,opts:[],phase:"ask",picked:null,screen:"play"};
   try{navigator.wakeLock&&navigator.wakeLock.request("screen").catch(()=>{});}catch(e){}
-  Sfx.pop();
-  nextQuestion(true);
+  state.rounds=setup.per;
+  showRound();
 }
 
 function nextQuestion(first,prefix,delay){
@@ -971,7 +985,13 @@ const LINES={
   judgeWrong:["Never mind, {name}.","Unlucky, {name}.","Better luck next time, {name}.","Oh well, {name}. The next one's yours.","So close, {name}."],
   streak:["That's {n} in a row!","{n} in a row! You're on fire!","Wow, {n} in a row!","{n} in a row. Unstoppable!"],
   skip:["Let's try a different one.","Okay, here's another one.","No problem. New question!"],
-  half:["We're halfway there!","Halfway through the quiz!"],
+  round1:["Round one! Let's get started.","Welcome to round one!","Here we go, round one!"],
+  round:["Round {n}!","Here comes round {n}!","On to round {n}!","Get ready for round {n}!"],
+  finalRound:["It's the final round!","Last round, everybody!","Here comes the final round!"],
+  half:["We're halfway there! Let's check the scores.","Halfway through! Here's how everyone's doing.","That's half the quiz done! Time for the scores."],
+  leader:["{name} is in the lead with {pts}.","{name} is out in front with {pts}.","{name} is top of the table with {pts}."],
+  level:["It's neck and neck! {name} are level on {pts}.","It's a tie at the top! {name} are on {pts} each."],
+  firstUp:["{name} goes first.","First up, it's {name}.","{name}, you're starting us off."],
   last:["Last question!","Here comes the very last question!","This is the final question!"],
   end:["That's the end of the game!","And that was the last question!","Pencils down, that's the game!"],
   win:["And the winner is {name}, with {pts}! Well played, everyone.","{name} wins with {pts}! What a game!","Congratulations, {name}! You win with {pts}.","Hooray for {name}, our champion, with {pts}!"],
@@ -990,7 +1010,6 @@ function readQuestion(prefix,delay){
   const p=cur(),q=state.q,parts=[];
   if(prefix) parts.push(prefix);
   if(state.turn===state.total-1&&state.total>2) parts.push(line("last"));
-  else if(state.total>=8&&state.turn===state.total/2) parts.push(line("half"));
   parts.push(line("turn",{name:p.name}));
   parts.push(line("cat",{cat:CATS[q.cat].name}));
   if(q.e||q.svg) parts.push(line("look"));
@@ -1012,6 +1031,7 @@ function score(correct){
 function advance(prefix,delay){
   state.turn++;
   if(state.turn>=state.total){endGame(prefix);return;}
+  if(state.turn%state.players.length===0){showRound(prefix);return;}
   nextQuestion(false,prefix,delay);
 }
 function endGame(prefix){
@@ -1035,6 +1055,7 @@ function render(){
   if(!state||state.screen==="setup") return renderSetup();
   if(state.screen==="play") return renderPlay();
   if(state.screen==="end") return renderEnd();
+  if(state.screen==="round") return renderRound();
 }
 
 function minutesNote(){const n=setup.players.filter(p=>p.name.trim()).length||1;
@@ -1121,19 +1142,61 @@ function renderPlay(){
   </div>`;
 }
 
+/* Players ranked by score; tied players share a place. Used at halfway and at the end. */
+function ranksHTML(){
+  const ps=state.players.slice().sort((a,b)=>b.score-a.score);
+  let place=0,last=null;
+  return `<div class="podium">${ps.map((p,i)=>{ if(p.score!==last){place=i+1;last=p.score;}
+    return `<div class="rank ${place===1?"first":""}"><span class="pos">${place}</span><span class="a" aria-hidden="true">${p.av}</span>
+      <div><div class="nm">${esc(p.name)}</div><div class="st">${p.score} of ${p.answered} right · best run ${p.best}</div></div>
+      <span class="pts" aria-label="${p.score} points">${p.score}</span></div>`;}).join("")}</div>`;
+}
+
+/* Shown before each round. A round is one question for every player. */
+function renderRound(){
+  const r=state.round, total=state.rounds, first=state.players[0];
+  const isFinal=r===total&&total>1, half=isHalfway();
+  $app.innerHTML=`
+  <header class="bar">${scoresHTML()}<button class="btn btn-ghost btn-small" data-a="quit">${ui.quitArm?"Tap again to end":"End game"}</button></header>
+  <section class="roundcard" aria-live="polite">
+    <span class="rk">${isFinal?"Final round":"Round"}</span>
+    <span class="rn">${r}</span>
+    <span class="of">of ${total}</span>
+    <div class="dots" aria-hidden="true">${Array.from({length:total},(_,i)=>`<span class="${i+1<r?"done":i+1===r?"now":""}"></span>`).join("")}</div>
+    <span class="upnext">First up: <span class="a" aria-hidden="true">${first.av}</span> ${esc(first.name)}</span>
+  </section>
+  ${half?`<h2 class="halfh">Halfway scores</h2>${ranksHTML()}`:""}
+  <button class="btn btn-main" data-a="go">Start round ${r} ▶</button>`;
+}
+/* Halfway scores appear on the round screen after half the rounds, in games of more than 5 rounds with 2+ players. */
+const isHalfway=()=>state.rounds>5&&state.players.length>1&&state.round===Math.floor(state.rounds/2)+1;
+
+function showRound(prefix){
+  state.screen="round"; state.round=Math.floor(state.turn/state.players.length)+1;
+  render(); window.scrollTo(0,0); Sfx.round();
+  const parts=[prefix];
+  if(state.round===1) parts.push(line("round1"));
+  else if(state.round===state.rounds&&state.rounds>1) parts.push(line("finalRound"));
+  else parts.push(line("round",{n:state.round}));
+  if(isHalfway()){
+    const pts=n=>n===1?"1 point":`${n} points`;
+    const ps=state.players.slice().sort((a,b)=>b.score-a.score), top=ps[0].score, leaders=ps.filter(p=>p.score===top);
+    parts.push(line("half"));
+    parts.push(leaders.length===1?line("leader",{name:leaders[0].name,pts:pts(top)}):line("level",{name:leaders.map(p=>p.name).join(" and "),pts:pts(top)}));
+  }
+  if(state.players.length>1) parts.push(line("firstUp",{name:state.players[0].name}));
+  Speech.say(parts,550);
+}
+
 function renderEnd(){
   const ps=state.players.slice().sort((a,b)=>b.score-a.score);
   const top=ps[0].score, winners=ps.filter(p=>p.score===top);
   const head=state.players.length===1?`Well played, ${esc(ps[0].name)}!`:winners.length===1?`${winners[0].av} ${esc(winners[0].name)} wins!`:"It's a draw!";
-  let place=0,last=null;
   $app.innerHTML=`
   <div class="trophy" aria-hidden="true">🏆</div>
   <h1 class="endh">${head}</h1>
   <p class="note" style="text-align:center">${state.total} questions played.</p>
-  <div class="podium">${ps.map((p,i)=>{ if(p.score!==last){place=i+1;last=p.score;}
-    return `<div class="rank ${place===1?"first":""}"><span class="pos">${place}</span><span class="a" aria-hidden="true">${p.av}</span>
-      <div><div class="nm">${esc(p.name)}</div><div class="st">${p.score} of ${p.answered} right · best run ${p.best}</div></div>
-      <span class="pts" aria-label="${p.score} points">${p.score}</span></div>`;}).join("")}</div>
+  ${ranksHTML()}
   <div class="rowbtns"><button class="btn btn-main" data-a="again">Play again</button><button class="btn btn-ghost" data-a="setup">Change players</button></div>`;
 }
 
@@ -1174,12 +1237,13 @@ $app.addEventListener("click",e=>{
       Speech.say([state.feedback,streak?line("streak",{n:streak}):null],650);
       break;}
     case "next": advance(); break;
+    case "go": state.screen="play"; nextQuestion(false); break;
     case "reveal": state.phase="revealed"; Sfx.pop(); render(); Speech.say([line("reveal",{a:state.q.a})]); break;
     case "judge": {const ok=b.dataset.v==="1"; const name=cur().name; const streak=score(ok);
       const said=[line(ok?"judgeRight":"judgeWrong",{name}),streak?line("streak",{n:streak}):""].filter(Boolean).join(" ");
       advance(said,700); break;}
     case "quit":
-      if(!ui.quitArm){ui.quitArm=true;render();clearTimeout(quitTimer);quitTimer=setTimeout(()=>{if(ui.quitArm){ui.quitArm=false;if(state&&state.screen==="play")render();}},3000);}
+      if(!ui.quitArm){ui.quitArm=true;render();clearTimeout(quitTimer);quitTimer=setTimeout(()=>{if(ui.quitArm){ui.quitArm=false;if(state&&(state.screen==="play"||state.screen==="round"))render();}},3000);}
       else {ui.quitArm=false;Speech.stop();if(state.turn>0){state.total=state.turn;endGame();}else{state=null;render();}}
       break;
   }
